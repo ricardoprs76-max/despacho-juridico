@@ -24,8 +24,8 @@ same engine serves a law firm, a hardware store or a clinic.
 ```bash
 pip install uv            # if you don't have it
 uv sync
-uv run agentes validate configs/ejemplo.yaml
-uv run agentes chat configs/ejemplo.yaml
+uv run agentes validate configs/tienda.yaml
+uv run agentes chat configs/tienda.yaml
 ```
 
 To use a real model, copy `.env.example` to `.env` (or export the variable) and set
@@ -33,7 +33,7 @@ To use a real model, copy `.env.example` to `.env` (or export the variable) and 
 is enough. `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` work the same way.
 
 ```
-$ uv run agentes chat configs/ejemplo.yaml --thread cliente-42
+$ uv run agentes chat configs/tienda.yaml --thread cliente-42
 Tú: ¿Hasta qué hora abren el sábado?
 Ferretería El Tornillo: Los sábados atendemos de 8:00 a. m. a 2:00 p. m. (Fuente: horarios.md)
 Tú: Envíale a ana@ejemplo.com la política de garantías
@@ -43,7 +43,7 @@ Ferretería El Tornillo: Listo, el correo quedó enviado.
 Tú: salir
 ¡Hasta pronto!
 
-$ uv run agentes auditoria configs/ejemplo.yaml
+$ uv run agentes auditoria configs/tienda.yaml
 2026-10-30 08:11 | cliente-42 | enviar_correo | ejecutada | {"para": "ana@ejemplo.com", ...}
 2026-10-30 08:10 | cliente-42 | buscar_documentos | ejecutada | {"consulta": "horario sábado"}
 ```

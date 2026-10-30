@@ -114,3 +114,12 @@ def test_embedding_model_name() -> None:
     from agentes.rag.search import EMBEDDING_MODEL
 
     assert EMBEDDING_MODEL == "models/gemini-embedding-001"
+
+
+def test_bm25_matches_word_variants() -> None:
+    chunks = [
+        Chunk("Revisión de contratos y honorarios del contrato.", "tarifas.md", None),
+        Chunk("Si el arrendatario incumple el contrato pagará una multa.", "contrato.md", None),
+    ]
+    hits = Bm25KnowledgeBase(chunks).search("¿qué pasa si incumplo el contrato?")
+    assert hits[0].chunk.source == "contrato.md"

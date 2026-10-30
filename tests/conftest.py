@@ -13,7 +13,7 @@ from pydantic import Field
 from agentes.config import AgentConfig, load_config
 from agentes.llm import ModelSelection
 
-EXAMPLE_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "ejemplo.yaml"
+EXAMPLE_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "tienda.yaml"
 
 
 class RecordingChatModel(BaseChatModel):

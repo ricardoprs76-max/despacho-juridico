@@ -12,6 +12,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import InMemoryVectorStore
 from pydantic import SecretStr
 from rank_bm25 import BM25Plus
+from snowballstemmer import stemmer
 
 from agentes.rag.loader import Chunk
 
@@ -40,10 +41,15 @@ class KnowledgeBase(Protocol):
     def search(self, query: str, k: int = 4) -> list[Hit]: ...
 
 
+_STEMMER = stemmer("spanish")
+
+
 def _tokens(text: str) -> list[str]:
+    """Lower-case, accent-free, stopword-free word stems ("incumplo" ~ "incumple")."""
     folded = unicodedata.normalize("NFKD", text.lower())
     without_accents = "".join(c for c in folded if not unicodedata.combining(c))
-    return [word for word in _WORD_RE.findall(without_accents) if word not in STOPWORDS]
+    words = [word for word in _WORD_RE.findall(without_accents) if word not in STOPWORDS]
+    return list(_STEMMER.stemWords(words))
 
 
 class Bm25KnowledgeBase:

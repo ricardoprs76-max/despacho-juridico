@@ -23,8 +23,8 @@ Cambia el archivo y el mismo motor atiende a un despacho jurídico, una ferreter
 ```bash
 pip install uv            # si no lo tienes
 uv sync
-uv run agentes validate configs/ejemplo.yaml
-uv run agentes chat configs/ejemplo.yaml
+uv run agentes validate configs/tienda.yaml
+uv run agentes chat configs/tienda.yaml
 ```
 
 Para usar un modelo real, copia `.env.example` a `.env` (o exporta la variable) y define

@@ -79,3 +79,19 @@ def test_ask_strips_text(example_config: AgentConfig, tmp_path: Path) -> None:
 def test_is_demo_reflects_selection(example_config: AgentConfig, tmp_path: Path) -> None:
     with make_agent(example_config, RecordingChatModel(replies=[]), tmp_path / "m.sqlite") as a:
         assert a.is_demo is False
+
+
+class BrokenChatModel(RecordingChatModel):
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # type: ignore[no-untyped-def]
+        raise ConnectionError("red caída")
+
+
+def test_provider_failure_raises_agent_error_and_leaves_no_orphan(
+    example_config: AgentConfig, tmp_path: Path
+) -> None:
+    from agentes.agent import AgentError
+
+    with make_agent(example_config, BrokenChatModel(replies=[]), tmp_path / "m.sqlite") as agent:
+        with pytest.raises(AgentError, match="red caída"):
+            agent.ask("t1", "hola")
+        assert agent.history("t1") == []

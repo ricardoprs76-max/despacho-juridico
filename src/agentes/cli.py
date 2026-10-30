@@ -6,8 +6,9 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 
-from agentes.agent import Agent
+from agentes.agent import Agent, AgentError
 from agentes.config import AgentConfig, ConfigError, load_config
 from agentes.llm import build_chat_model
 
@@ -18,12 +19,20 @@ DEMO_NOTICE = "Modo demo: no hay clave de IA configurada. Las respuestas son de 
 GOODBYE = "¡Hasta pronto!"
 DEFAULT_DB = Path(".agentes/memoria.sqlite")
 
+
+@app.callback()
+def _main() -> None:
+    """Agentes IA para Empresas."""
+    # API keys may live in a .env file in the current folder; real env vars win.
+    load_dotenv(Path.cwd() / ".env")
+
+
 ConfigArg = Annotated[Path, typer.Argument(help="Archivo YAML de la empresa.")]
 
 
 def _force_utf8() -> None:
     # Windows consoles default to a legacy code page; Spanish text needs UTF-8.
-    for stream in (sys.stdout, sys.stderr):
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
         if isinstance(stream, io.TextIOWrapper):
             stream.reconfigure(encoding="utf-8")
 
@@ -60,7 +69,7 @@ def chat(
             typer.echo("Tú: ", nl=False)
             try:
                 line = input()
-            except EOFError:
+            except (EOFError, KeyboardInterrupt):
                 typer.echo()
                 break
             text = line.strip()
@@ -68,5 +77,10 @@ def chat(
                 continue
             if text.lower() == EXIT_WORD:
                 break
-            typer.echo(f"{cfg.company_name}: {agent.ask(thread, text)}")
+            try:
+                reply = agent.ask(thread, text)
+            except AgentError as exc:
+                typer.echo(f"No se pudo obtener respuesta del modelo: {exc}", err=True)
+                continue
+            typer.echo(f"{cfg.company_name}: {reply}")
     typer.echo(GOODBYE)

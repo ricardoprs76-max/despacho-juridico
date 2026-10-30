@@ -89,3 +89,25 @@ def test_accents_round_trip(tmp_path: Path) -> None:
     tone = "cálido y cercano, ¿en qué te ayudo?"
     path = write(tmp_path, MINIMAL.replace("tone: amable", f'tone: "{tone}"'))
     assert tone in load_config(path).system_prompt()
+
+
+def test_non_utf8_file_raises_config_error(tmp_path: Path) -> None:
+    path = tmp_path / "ansi.yaml"
+    path.write_bytes(MINIMAL.replace("amable", "Ñandú").encode("cp1252"))
+    with pytest.raises(ConfigError, match="no está en UTF-8"):
+        load_config(path)
+
+
+@pytest.mark.parametrize(
+    ("yaml_text", "expected"),
+    [
+        (MINIMAL.replace("tone: amable\n", ""), "Campo inválido 'tone' en .*: falta este campo"),
+        (MINIMAL + "otro: 1\n", "Campo inválido 'otro' en .*: campo no permitido"),
+        (MINIMAL + "model:\n  provider: llama\n", "valor no permitido"),
+        (MINIMAL + "model:\n  temperature: 5\n", "debe ser menor o igual a 1"),
+    ],
+)
+def test_validation_messages_in_spanish(tmp_path: Path, yaml_text: str, expected: str) -> None:
+    path = write(tmp_path, yaml_text)
+    with pytest.raises(ConfigError, match=expected):
+        load_config(path)

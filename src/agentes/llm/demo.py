@@ -25,7 +25,10 @@ GENERIC_ANSWER = (
     "(por ejemplo GOOGLE_API_KEY, que es gratis) para obtener respuestas de verdad."
 )
 _GREETING_RE = re.compile(r"\b(hola|buenos días|buenas tardes|buenas noches|buenas)\b")
-_SEARCH_RE = re.compile(r"\b(horario|precio|pol[ií]tica|garant[ií]a|documento)")
+_SEARCH_RE = re.compile(
+    r"\b(horario|precio|cuesta|cu[aá]nto|tarifa|costo|valor|pol[ií]tica|garant[ií]a|documento"
+    r"|domicilio|examen|ex[aá]menes|cita|cancelar|contrato|cl[aá]usula|requisito|convenio)"
+)
 _SHEET_RE = re.compile(r"\b(registra|anota)")
 _EMAIL_RE = re.compile(r"\b(correo|email)")
 _DEADLINE_RE = re.compile(r"\b(plazo|t[ée]rmino|vence|vencimiento)")

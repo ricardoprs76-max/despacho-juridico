@@ -159,3 +159,20 @@ def test_demo_plazo_electronic_flag() -> None:
 
 def test_demo_plazo_without_date_no_call() -> None:
     assert plazo_args("¿Cuál es el plazo de la reposición?") is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "¿Cuánto cuesta la consulta?",
+        "¿Hacen domicilios?",
+        "¿Cómo me preparo para el examen?",
+        "Revisa la cláusula quinta del contrato",
+        "¿Puedo cancelar mi cita?",
+        "¿Cuál es la tarifa?",
+    ],
+)
+def test_demo_searches_sector_questions(text: str) -> None:
+    model = DemoChatModel().bind_tools([buscar_documentos])
+    assert isinstance(model, DemoChatModel)
+    assert demo_call(model, text).tool_calls[0]["name"] == "buscar_documentos"

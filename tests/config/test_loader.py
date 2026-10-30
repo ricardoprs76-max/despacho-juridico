@@ -58,7 +58,7 @@ def test_bad_id_slug_rejected(tmp_path: Path) -> None:
 
 
 def test_confirm_tools_must_be_subset(tmp_path: Path) -> None:
-    path = write(tmp_path, MINIMAL + "tools: [buscar]\nconfirm_tools: [enviar_correo]\n")
+    path = write(tmp_path, MINIMAL + "tools: [buscar_documentos]\nconfirm_tools: [enviar_correo]\n")
     with pytest.raises(ConfigError, match="enviar_correo"):
         load_config(path)
 
@@ -110,4 +110,10 @@ def test_non_utf8_file_raises_config_error(tmp_path: Path) -> None:
 def test_validation_messages_in_spanish(tmp_path: Path, yaml_text: str, expected: str) -> None:
     path = write(tmp_path, yaml_text)
     with pytest.raises(ConfigError, match=expected):
+        load_config(path)
+
+
+def test_unknown_tool_name_rejected_in_config(tmp_path: Path) -> None:
+    path = write(tmp_path, MINIMAL + "tools: [buscar_documentos, volar]\n")
+    with pytest.raises(ConfigError, match="Herramienta desconocida: volar"):
         load_config(path)

@@ -59,3 +59,13 @@ def test_format_hits_cites_source_and_page() -> None:
 def test_format_no_hits_message() -> None:
     assert format_hits([]) == NO_RESULTS
     assert NO_RESULTS == "No encontré información sobre eso en los documentos de la empresa."
+
+
+def test_bm25_single_document_corpus_still_finds_match() -> None:
+    kb = Bm25KnowledgeBase([Chunk("El horario es de 8 a 6.", "horarios.md", None)])
+    assert [h.chunk.source for h in kb.search("horario")] == ["horarios.md"]
+
+
+def test_bm25_term_in_every_chunk_still_matches() -> None:
+    chunks = [Chunk(f"Sede {n}: horario de 8 a 6.", f"sede{n}.md", None) for n in range(3)]
+    assert len(Bm25KnowledgeBase(chunks).search("horario")) == 3

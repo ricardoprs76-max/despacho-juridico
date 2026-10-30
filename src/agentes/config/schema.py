@@ -3,7 +3,9 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from agentes.tool_names import TOOL_NAMES
 
 NO_INVENT_LINE = "Si no sabes la respuesta, dilo claramente; nunca inventes datos."
 
@@ -33,6 +35,14 @@ class AgentConfig(BaseModel):
     tools: list[str] = []
     confirm_tools: list[str] = []
     knowledge_dir: Path | None = None
+
+    @field_validator("tools")
+    @classmethod
+    def _tools_exist(cls, tools: list[str]) -> list[str]:
+        unknown = [name for name in tools if name not in TOOL_NAMES]
+        if unknown:
+            raise ValueError("Herramienta desconocida: " + ", ".join(unknown))
+        return tools
 
     @model_validator(mode="after")
     def _confirm_tools_are_enabled(self) -> "AgentConfig":

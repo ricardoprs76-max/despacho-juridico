@@ -11,7 +11,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import InMemoryVectorStore
 from pydantic import SecretStr
-from rank_bm25 import BM25Okapi
+from rank_bm25 import BM25Plus
 
 from agentes.rag.loader import Chunk
 
@@ -41,14 +41,21 @@ class Bm25KnowledgeBase:
 
     def __init__(self, chunks: list[Chunk]) -> None:
         self._chunks = chunks
-        self._index = BM25Okapi([_tokens(c.text) for c in chunks]) if chunks else None
+        self._token_sets = [set(_tokens(c.text)) for c in chunks]
+        # BM25+ keeps IDF positive, so tiny corpora (one or two documents) still rank.
+        self._index = BM25Plus([_tokens(c.text) for c in chunks]) if chunks else None
 
     def search(self, query: str, k: int = 4) -> list[Hit]:
         if self._index is None:
             return []
-        scores = self._index.get_scores(_tokens(query))
-        ranked = sorted(zip(self._chunks, scores, strict=True), key=lambda p: p[1], reverse=True)
-        return [Hit(chunk, float(score)) for chunk, score in ranked[:k] if score > 0]
+        terms = set(_tokens(query))
+        scores = self._index.get_scores(list(terms))
+        matching = [
+            Hit(chunk, float(score))
+            for chunk, tokens, score in zip(self._chunks, self._token_sets, scores, strict=True)
+            if tokens & terms
+        ]
+        return sorted(matching, key=lambda hit: hit.score, reverse=True)[:k]
 
 
 class VectorKnowledgeBase:

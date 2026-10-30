@@ -12,6 +12,14 @@ class SheetBackend(Protocol):
     def append_row(self, values: Mapping[str, str]) -> str: ...
 
 
+_FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _safe(text: str) -> str:
+    """Stop spreadsheet apps from running a cell as a formula (CSV injection)."""
+    return "'" + text if text.startswith(_FORMULA_START) else text
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
@@ -23,7 +31,10 @@ class CsvSheet:
         self.path = path
 
     def append_row(self, values: Mapping[str, str]) -> str:
-        row = {"fecha": _now(), **{str(k): str(v) for k, v in values.items()}}
+        row = {"fecha": _now()}
+        for key, value in values.items():
+            name = "fecha_dato" if str(key) == "fecha" else _safe(str(key))
+            row[name] = _safe(str(value))
         rows: list[dict[str, str]] = []
         header: list[str] = []
         if self.path.exists():
@@ -56,7 +67,7 @@ class GoogleSheet:
             self._client = gspread.service_account(filename=str(self.service_account_file))
         worksheet = self._client.open_by_key(self.sheet_id).sheet1
         # Free-form rows: each cell is "key: value" so no fixed header is needed.
-        cells = [_now(), *(f"{k}: {v}" for k, v in values.items())]
+        cells = [_now(), *(_safe(f"{k}: {v}") for k, v in values.items())]
         worksheet.append_row(cells, value_input_option="RAW")
         return "Fila registrada en Google Sheets."
 

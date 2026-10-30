@@ -90,5 +90,17 @@ def test_demo_summarizes_tool_result() -> None:
     assert result.content == "[modo demo] Resultado: Abrimos de 8 a 6 (Fuente: horarios.md)"
 
 
+def test_demo_sheet_args_use_field_list() -> None:
+    @tool
+    def registrar_en_hoja(datos: list[dict[str, str]]) -> str:
+        """Registra."""
+        return "ok"
+
+    model = DemoChatModel().bind_tools([registrar_en_hoja])
+    assert isinstance(model, DemoChatModel)
+    call = demo_call(model, "Anota que llamó Ana").tool_calls[0]
+    assert call["args"] == {"datos": [{"campo": "nota", "valor": "Anota que llamó Ana"}]}
+
+
 def test_demo_greeting_whole_word_only() -> None:
     assert "modo demo no puedo consultar" in reply("la chola llegó")

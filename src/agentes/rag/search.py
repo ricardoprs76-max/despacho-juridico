@@ -16,7 +16,7 @@ from rank_bm25 import BM25Plus
 from agentes.rag.loader import Chunk
 
 NO_RESULTS = "No encontré información sobre eso en los documentos de la empresa."
-EMBEDDING_MODEL = "models/text-embedding-004"
+EMBEDDING_MODEL = "models/gemini-embedding-001"
 _WORD_RE = re.compile(r"\w+")
 # Common Spanish function words (accents already stripped); they match almost every
 # chunk and would drown out the words that carry the question's meaning.
@@ -87,17 +87,31 @@ class VectorKnowledgeBase:
 
 
 def build_knowledge_base(
-    chunks: list[Chunk], env: Mapping[str, str] | None = None
-) -> KnowledgeBase:
-    """Use Gemini embeddings when GOOGLE_API_KEY is set, otherwise BM25."""
+    chunks: list[Chunk],
+    env: Mapping[str, str] | None = None,
+    embeddings: Embeddings | None = None,
+) -> tuple[KnowledgeBase, list[str]]:
+    """Use embeddings when GOOGLE_API_KEY is set, otherwise (or if they fail) BM25.
+
+    Returns the knowledge base and Spanish warnings for the user.
+    """
     env = os.environ if env is None else env
     key = env.get("GOOGLE_API_KEY", "").strip()
     if not key:
-        return Bm25KnowledgeBase(chunks)
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        return Bm25KnowledgeBase(chunks), []
+    try:
+        if embeddings is None:
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-    embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL, api_key=SecretStr(key))
-    return VectorKnowledgeBase(chunks, embeddings)
+            embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL, api_key=SecretStr(key))
+        return VectorKnowledgeBase(chunks, embeddings), []
+    except Exception as exc:
+        # Invalid key, no network or quota: the agent must still start and answer.
+        reason = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+        warning = (
+            f"No se pudieron calcular los embeddings ({reason}); se usa búsqueda por palabras."
+        )
+        return Bm25KnowledgeBase(chunks), [warning]
 
 
 def format_hits(hits: list[Hit]) -> str:

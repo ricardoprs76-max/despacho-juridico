@@ -92,7 +92,9 @@ class DemoChatModel(BaseChatModel):
             return ToolCall(name="buscar_documentos", args={"consulta": original}, id=call_id)
         if "registrar_en_hoja" in self.tool_names and _SHEET_RE.search(text):
             return ToolCall(
-                name="registrar_en_hoja", args={"datos": {"nota": original}}, id=call_id
+                name="registrar_en_hoja",
+                args={"datos": [{"campo": "nota", "valor": original}]},
+                id=call_id,
             )
         if "enviar_correo" in self.tool_names and _EMAIL_RE.search(text):
             args = {

@@ -218,3 +218,32 @@ def test_chat_prints_knowledge_warnings(tmp_path: Path) -> None:
         app, ["chat", str(config), "--data", str(tmp_path / "d")], input="salir\n"
     )
     assert f"Aviso: La carpeta de documentos no existe: {tmp_path / 'no-existe'}" in result.output
+
+
+def test_chat_startup_pending_model_error_does_not_crash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentes.agent import Agent, AgentError
+
+    chat_in(tmp_path, "Mándale un correo al cliente\n")  # leaves a pending action
+
+    def boom(self: Agent, thread_id: str, approved: bool) -> None:
+        raise AgentError("sin red")
+
+    monkeypatch.setattr(Agent, "confirm", boom)
+    output = chat_in(tmp_path, "s\nsalir\n")
+    assert "No se pudo obtener respuesta del modelo: sin red" in output
+    assert output.rstrip().endswith("¡Hasta pronto!")
+
+
+def test_chat_ctrl_c_during_answer_ends_politely(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentes.agent import Agent
+
+    def interrupt(self: Agent, thread_id: str, text: str) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(Agent, "ask", interrupt)
+    output = chat_in(tmp_path, "hola\n")
+    assert output.rstrip().endswith("¡Hasta pronto!")

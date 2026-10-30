@@ -43,7 +43,9 @@ def test_vector_kb_uses_embeddings(docs_dir: Path) -> None:
 
 
 def test_build_kb_without_key_is_bm25(docs_dir: Path) -> None:
-    assert isinstance(build_knowledge_base(load_chunks(docs_dir)[0], env={}), Bm25KnowledgeBase)
+    kb, warnings = build_knowledge_base(load_chunks(docs_dir)[0], env={})
+    assert isinstance(kb, Bm25KnowledgeBase)
+    assert warnings == []
 
 
 def test_format_hits_cites_source_and_page() -> None:
@@ -80,3 +82,35 @@ def test_bm25_ignores_spanish_stopwords() -> None:
     ]
     hits = Bm25KnowledgeBase(chunks).search("¿Cuál es el horario?")
     assert [h.chunk.source for h in hits] == ["horarios.md"]
+
+
+class BrokenEmbeddings(DeterministicFakeEmbedding):
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        raise RuntimeError("400 API key not valid")
+
+
+def test_build_kb_falls_back_to_bm25_when_embeddings_fail(docs_dir: Path) -> None:
+    chunks = load_chunks(docs_dir)[0]
+    kb, warnings = build_knowledge_base(
+        chunks, env={"GOOGLE_API_KEY": "mala"}, embeddings=BrokenEmbeddings(size=8)
+    )
+    assert isinstance(kb, Bm25KnowledgeBase)
+    assert warnings == [
+        "No se pudieron calcular los embeddings (400 API key not valid); "
+        "se usa búsqueda por palabras."
+    ]
+
+
+def test_build_kb_uses_given_embeddings_with_key(docs_dir: Path) -> None:
+    chunks = load_chunks(docs_dir)[0]
+    kb, warnings = build_knowledge_base(
+        chunks, env={"GOOGLE_API_KEY": "k"}, embeddings=DeterministicFakeEmbedding(size=8)
+    )
+    assert isinstance(kb, VectorKnowledgeBase)
+    assert warnings == []
+
+
+def test_embedding_model_name() -> None:
+    from agentes.rag.search import EMBEDDING_MODEL
+
+    assert EMBEDDING_MODEL == "models/gemini-embedding-001"

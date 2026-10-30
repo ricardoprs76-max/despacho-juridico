@@ -8,7 +8,13 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Self
 
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, RemoveMessage
+from langchain_core.messages import (
+    AIMessage,
+    AnyMessage,
+    HumanMessage,
+    RemoveMessage,
+    ToolMessage,
+)
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.types import Command
@@ -17,7 +23,7 @@ from agentes.audit import AuditLog
 from agentes.config import AgentConfig
 from agentes.graph import build_graph
 from agentes.llm import ModelSelection
-from agentes.tools import build_context, build_tools
+from agentes.tools import build_context, build_tools, fields_to_row
 
 
 class AgentError(Exception):
@@ -39,14 +45,25 @@ class AgentReply:
     pending: PendingAction | None = None
 
 
+BODY_PREVIEW = 160
+
+
 def describe(tool: str, args: Mapping[str, Any]) -> str:
     """One Spanish line telling the user what the agent is about to do."""
     if tool == "enviar_correo":
-        return f'Enviar correo a {args.get("para", "?")} con asunto "{args.get("asunto", "")}"'
+        body = " ".join(str(args.get("cuerpo", "")).split())
+        if len(body) > BODY_PREVIEW:
+            body = body[:BODY_PREVIEW].rstrip() + "…"
+        return (
+            f'Enviar correo a {args.get("para", "?")} con asunto "{args.get("asunto", "")}". '
+            f'Texto: "{body}"'
+        )
     if tool == "registrar_en_hoja":
-        datos = args.get("datos") or {}
-        fields = ", ".join(f"{k}={v}" for k, v in dict(datos).items())
-        return f"Registrar en la hoja: {fields}"
+        try:
+            row = fields_to_row(list(args.get("datos") or []))
+        except Exception:
+            row = {}
+        return "Registrar en la hoja: " + ", ".join(f"{k}={v}" for k, v in row.items())
     return f"Ejecutar {tool} con {dict(args)}"
 
 
@@ -98,6 +115,9 @@ class Agent:
         before = {m.id for m in self.history(thread_id)}
         try:
             self._graph.invoke({"messages": [message]}, self._run_config(thread_id))
+        except KeyboardInterrupt:
+            self._discard_turn(thread_id, before)
+            raise
         except Exception as exc:
             self._discard_turn(thread_id, before)
             raise AgentError(str(exc)) from exc
@@ -156,6 +176,10 @@ class Agent:
     def _discard_turn(self, thread_id: str, before: set[str | None]) -> None:
         # Drop everything this failed turn added so the next turn starts clean.
         added = [m for m in self.history(thread_id) if m.id not in before]
+        # If a tool already ran, keep the turn: the model and the user must still see
+        # that the email was sent, or a retry would send it twice.
+        if any(isinstance(m, ToolMessage) for m in added):
+            return
         if added:
             removals = [RemoveMessage(id=str(m.id)) for m in added]
             self._graph.update_state(self._run_config(thread_id), {"messages": removals})

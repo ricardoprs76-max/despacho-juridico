@@ -35,3 +35,15 @@ def test_long_document_is_split(tmp_path: Path) -> None:
     chunks, _ = load_chunks(tmp_path, chunk_size=800, overlap=120)
     assert len(chunks) > 1
     assert all(len(c.text) <= 800 for c in chunks)
+
+
+def test_txt_in_cp1252_is_read(tmp_path: Path) -> None:
+    (tmp_path / "viejo.txt").write_bytes("Garantía de un año".encode("cp1252"))
+    chunks, warnings = load_chunks(tmp_path)
+    assert warnings == []
+    assert chunks[0].text == "Garantía de un año"
+
+
+def test_utf8_bom_is_stripped(tmp_path: Path) -> None:
+    (tmp_path / "bom.md").write_bytes("\ufeffHorario de 8 a 6".encode())
+    assert load_chunks(tmp_path)[0][0].text == "Horario de 8 a 6"

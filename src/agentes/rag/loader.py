@@ -19,6 +19,15 @@ class Chunk:
     page: int | None
 
 
+def _read_text(path: Path) -> str:
+    """UTF-8 (with or without BOM), falling back to Windows' cp1252 for older files."""
+    data = path.read_bytes()
+    try:
+        return data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return data.decode("cp1252")
+
+
 def _pdf_pages(path: Path) -> list[tuple[int, str]]:
     # pypdf logs noisy warnings on broken files; we report our own message instead.
     logging.getLogger("pypdf").setLevel(logging.ERROR)
@@ -48,7 +57,7 @@ def load_chunks(
             if suffix == ".pdf":
                 pages: list[tuple[int | None, str]] = list(_pdf_pages(path))
             else:
-                pages = [(None, path.read_text(encoding="utf-8"))]
+                pages = [(None, _read_text(path))]
         except Exception as exc:
             warnings.append(f"Se omitió {source}: {exc}")
             continue

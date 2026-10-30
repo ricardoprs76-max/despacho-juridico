@@ -4,6 +4,8 @@ import io
 import json
 import sqlite3
 import sys
+from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from typing import Annotated
 
@@ -94,6 +96,14 @@ def _show(agent: Agent, thread: str, reply: AgentReply) -> None:
         typer.echo(f"{agent.config.company_name}: {reply.text}")
 
 
+def _guarded(action: Callable[[], AgentReply], agent: Agent, thread: str) -> None:
+    """Run one exchange and show it; a model failure is reported and the chat goes on."""
+    try:
+        _show(agent, thread, action())
+    except AgentError as exc:
+        typer.echo(f"No se pudo obtener respuesta del modelo: {exc}", err=True)
+
+
 @app.command()
 def validate(config: ConfigArg) -> None:
     """Comprueba que el archivo de configuración es válido."""
@@ -121,19 +131,16 @@ def chat(
         try:
             pending = agent.pending(thread)
             if pending is not None:
-                _show(agent, thread, AgentReply(text="", pending=pending))
+                _guarded(partial(AgentReply, text="", pending=pending), agent, thread)
             while True:
                 text = _read("Tú: ").strip()
                 if not text:
                     continue
                 if text.lower() == EXIT_WORD:
                     break
-                try:
-                    _show(agent, thread, agent.ask(thread, text))
-                except AgentError as exc:
-                    typer.echo(f"No se pudo obtener respuesta del modelo: {exc}", err=True)
-        except _EndOfInput:
-            pass
+                _guarded(partial(agent.ask, thread, text), agent, thread)
+        except (_EndOfInput, KeyboardInterrupt):
+            typer.echo()
     typer.echo(GOODBYE)
 
 

@@ -34,6 +34,7 @@ def test_names() -> None:
 
 def test_only_enabled_tools_built_in_config_order(tmp_path: Path, knowledge: Path) -> None:
     cfg = config(["enviar_correo", "buscar_documentos"], knowledge)
+    cfg = cfg.model_copy(update={"confirm_tools": ["enviar_correo"]})
     tools = build_tools(cfg, build_context(cfg, tmp_path, env={}))
     assert [t.name for t in tools] == ["enviar_correo", "buscar_documentos"]
     assert all(t.description for t in tools)
@@ -50,12 +51,13 @@ def test_search_tool_returns_cited_text(tmp_path: Path, knowledge: Path) -> None
 def test_sheet_tool_appends_row(tmp_path: Path) -> None:
     cfg = config(["registrar_en_hoja"])
     [sheet] = build_tools(cfg, build_context(cfg, tmp_path, env={}))
-    assert sheet.invoke({"datos": {"cliente": "Ana"}}) == "Fila registrada en hoja.csv."
+    datos = [{"campo": "cliente", "valor": "Ana"}]
+    assert sheet.invoke({"datos": datos}) == "Fila registrada en hoja.csv."
     assert "Ana" in (tmp_path / "hoja.csv").read_text(encoding="utf-8-sig")
 
 
 def test_email_tool_writes_outbox(tmp_path: Path) -> None:
-    cfg = config(["enviar_correo"])
+    cfg = config(["enviar_correo"]).model_copy(update={"confirm_tools": ["enviar_correo"]})
     [mail] = build_tools(cfg, build_context(cfg, tmp_path, env={}))
     result = mail.invoke({"para": "a@b.co", "asunto": "Hola", "cuerpo": "¿Qué tal?"})
     assert result.startswith("Correo guardado en la bandeja de salida:")
@@ -66,6 +68,7 @@ def test_email_tool_writes_outbox(tmp_path: Path) -> None:
 
 def test_context_skips_knowledge_when_search_disabled(tmp_path: Path) -> None:
     cfg = config(["enviar_correo"], tmp_path / "no-existe")
+    cfg = cfg.model_copy(update={"confirm_tools": ["enviar_correo"]})
     ctx = build_context(cfg, tmp_path, env={})
     assert ctx.warnings == ()
     assert ctx.knowledge.search("lo que sea") == []
@@ -80,3 +83,31 @@ def test_context_reports_knowledge_warnings(tmp_path: Path) -> None:
 def test_search_enabled_without_knowledge_dir_warns(tmp_path: Path) -> None:
     ctx = build_context(config(["buscar_documentos"]), tmp_path, env={})
     assert ctx.warnings == ("buscar_documentos está activa pero no hay knowledge_dir configurado.",)
+
+
+def _objects_without_properties(schema: object) -> list[object]:
+    found: list[object] = []
+    if isinstance(schema, dict):
+        if schema.get("type") == "object" and not schema.get("properties"):
+            found.append(schema)
+        for value in schema.values():
+            found += _objects_without_properties(value)
+    elif isinstance(schema, list):
+        for item in schema:
+            found += _objects_without_properties(item)
+    return found
+
+
+def test_tool_schemas_have_no_open_objects(tmp_path: Path, knowledge: Path) -> None:
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    cfg = config(["buscar_documentos", "registrar_en_hoja", "enviar_correo"], knowledge)
+    for tool in build_tools(cfg, build_context(cfg, tmp_path, env={})):
+        schema = convert_to_openai_tool(tool)["function"]["parameters"]
+        assert _objects_without_properties(schema) == [], tool.name
+
+
+def test_side_effect_tool_without_confirmation_warns(tmp_path: Path) -> None:
+    cfg = config(["enviar_correo"])
+    ctx = build_context(cfg, tmp_path, env={})
+    assert ctx.warnings == ("enviar_correo se ejecutará sin pedir confirmación.",)

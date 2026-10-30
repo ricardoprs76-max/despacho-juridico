@@ -76,7 +76,9 @@ def test_side_effect_tool_waits_for_confirmation(tmp_path: Path) -> None:
         assert reply.pending is not None
         assert reply.pending.tool == "enviar_correo"
         assert reply.pending.args == EMAIL_ARGS
-        expected = 'Enviar correo a ana@ejemplo.com con asunto "Cotización"'
+        expected = (
+            'Enviar correo a ana@ejemplo.com con asunto "Cotización". Texto: "Adjunto precios."'
+        )
         assert reply.pending.description == expected
         assert agent.pending("t1") == reply.pending
         assert agent.audit.entries() == []
@@ -167,7 +169,10 @@ def test_invalid_args_reported_as_error_without_confirmation(tmp_path: Path) -> 
 def test_backend_failure_audited_as_error_and_reply_continues(tmp_path: Path) -> None:
     (tmp_path / "data" / "hoja.csv").mkdir(parents=True)  # a folder where the CSV should go
     model = RecordingChatModel(
-        replies=[call("registrar_en_hoja", {"datos": {"cliente": "Ana"}}), "No pude registrarlo."]
+        replies=[
+            call("registrar_en_hoja", {"datos": [{"campo": "cliente", "valor": "Ana"}]}),
+            "No pude registrarlo.",
+        ]
     )
     with make_agent(tmp_path, model) as agent:
         agent.ask("t1", "Anota a Ana")
@@ -181,7 +186,11 @@ def test_two_confirmations_in_one_turn_execute_once_each(tmp_path: Path) -> None
     both = AIMessage(
         "",
         tool_calls=[
-            {"name": "registrar_en_hoja", "args": {"datos": {"cliente": "Ana"}}, "id": "a"},
+            {
+                "name": "registrar_en_hoja",
+                "args": {"datos": [{"campo": "cliente", "valor": "Ana"}]},
+                "id": "a",
+            },
             {"name": "enviar_correo", "args": EMAIL_ARGS, "id": "b"},
         ],
     )
@@ -212,3 +221,48 @@ def test_knowledge_warnings_exposed(tmp_path: Path) -> None:
     with make_agent(tmp_path, RecordingChatModel(replies=[]), config) as agent:
         expected = f"La carpeta de documentos no existe: {tmp_path / 'no-existe'}"
         assert agent.warnings == (expected,)
+
+
+def test_email_confirmation_shows_body(tmp_path: Path) -> None:
+    long_body = "x" * 400
+    args = {**EMAIL_ARGS, "cuerpo": long_body}
+    with make_agent(tmp_path, RecordingChatModel(replies=[call("enviar_correo", args)])) as agent:
+        pending = agent.ask("t1", "Envía").pending
+    assert pending is not None
+    assert pending.description.startswith(
+        'Enviar correo a ana@ejemplo.com con asunto "Cotización". Texto: "'
+    )
+    assert pending.description.endswith('…"')
+    assert len(pending.description) < 400
+
+
+def test_sheet_description_lists_fields(tmp_path: Path) -> None:
+    datos = [{"campo": "cliente", "valor": "Ana"}, {"campo": "pedido", "valor": "42"}]
+    model = RecordingChatModel(replies=[call("registrar_en_hoja", {"datos": datos})])
+    with make_agent(tmp_path, model) as agent:
+        pending = agent.ask("t1", "Anota").pending
+    assert pending is not None
+    assert pending.description == "Registrar en la hoja: cliente=Ana, pedido=42"
+
+
+def test_model_failure_after_executed_side_effect_keeps_history(tmp_path: Path) -> None:
+    from agentes.agent import AgentError
+
+    config = make_config(tmp_path, confirm_tools=[])
+    model = RecordingChatModel(
+        replies=[call("enviar_correo", EMAIL_ARGS), ConnectionError("caída")]
+    )
+    with make_agent(tmp_path, model, config) as agent:
+        with pytest.raises(AgentError, match="caída"):
+            agent.ask("t1", "Envía la cotización")
+        history = agent.history("t1")
+    assert any(isinstance(m, ToolMessage) for m in history)
+    assert len(outbox(tmp_path)) == 1
+
+
+def test_ctrl_c_during_model_call_discards_turn(tmp_path: Path) -> None:
+    model = RecordingChatModel(replies=[KeyboardInterrupt()])
+    with make_agent(tmp_path, model) as agent:
+        with pytest.raises(KeyboardInterrupt):
+            agent.ask("t1", "hola")
+        assert agent.history("t1") == []

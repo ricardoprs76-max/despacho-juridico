@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from langchain_core.tools import BaseTool, StructuredTool
+from pydantic import BaseModel, Field
 
 from agentes.config import AgentConfig
 from agentes.integrations import Mailer, SheetBackend, mailer_from_env, sheet_from_env
@@ -15,6 +16,7 @@ from agentes.rag import (
     format_hits,
     load_chunks,
 )
+from agentes.tool_names import SIDE_EFFECT_TOOLS
 
 
 @dataclass(frozen=True)
@@ -37,7 +39,11 @@ def build_context(
             warnings.append("buscar_documentos está activa pero no hay knowledge_dir configurado.")
         else:
             chunks, warnings = load_chunks(config.knowledge_dir)
-            knowledge = build_knowledge_base(chunks, env)
+            knowledge, kb_warnings = build_knowledge_base(chunks, env)
+            warnings += kb_warnings
+    for name in config.tools:
+        if name in SIDE_EFFECT_TOOLS and name not in config.confirm_tools:
+            warnings.append(f"{name} se ejecutará sin pedir confirmación.")
     return ToolContext(
         knowledge=knowledge,
         sheet=sheet_from_env(data_dir, env),
@@ -60,15 +66,32 @@ def _search(ctx: ToolContext) -> BaseTool:
     )
 
 
+class Campo(BaseModel):
+    """One column of the row: a field name and its value."""
+
+    campo: str = Field(description="Nombre de la columna, por ejemplo 'cliente'.")
+    valor: str = Field(description="Valor de la columna, por ejemplo 'Ana'.")
+
+
+def fields_to_row(datos: list[Campo] | list[dict[str, str]]) -> dict[str, str]:
+    row: dict[str, str] = {}
+    for item in datos:
+        field = item if isinstance(item, Campo) else Campo.model_validate(item)
+        row[field.campo] = field.valor
+    return row
+
+
 def _sheet(ctx: ToolContext) -> BaseTool:
-    def registrar_en_hoja(datos: dict[str, str]) -> str:
-        return ctx.sheet.append_row(datos)
+    # A list of {campo, valor} instead of a free-form dict: Gemini rejects JSON-schema
+    # objects without declared properties.
+    def registrar_en_hoja(datos: list[Campo]) -> str:
+        return ctx.sheet.append_row(fields_to_row(datos))
 
     return StructuredTool.from_function(
         registrar_en_hoja,
         description=(
-            "Registra una fila en la hoja de cálculo de la empresa. 'datos' es un diccionario "
-            "campo → valor, por ejemplo {'cliente': 'Ana', 'pedido': '42'}."
+            "Registra una fila en la hoja de cálculo de la empresa. 'datos' es una lista de "
+            "columnas, por ejemplo [{'campo': 'cliente', 'valor': 'Ana'}]."
         ),
     )
 

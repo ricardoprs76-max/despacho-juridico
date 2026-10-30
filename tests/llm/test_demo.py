@@ -142,6 +142,15 @@ def test_demo_calls_plazo_tool() -> None:
         ("plazo para contestar la demanda notificada 02/03/2026", "contestacion_verbal"),
         ("término de excepciones notificado el 02/03/2026", "excepciones_ejecutivo"),
         ("plazo para impugnar la tutela del 02/03/2026", "impugnacion_tutela"),
+        ("plazo para apelar la sentencia de tutela del 02/03/2026", "impugnacion_tutela"),
+        (
+            "plazo para responder la petición de documentos del 02/03/2026",
+            "respuesta_peticion_documentos",
+        ),
+        (
+            "plazo para responder la consulta en derecho de petición del 02/03/2026",
+            "respuesta_peticion_consulta",
+        ),
         ("plazo de respuesta a la petición radicada el 02/03/2026", "respuesta_derecho_peticion"),
     ],
 )
@@ -152,7 +161,7 @@ def test_demo_plazo_actuacion_keywords(text: str, actuacion: str) -> None:
 
 
 def test_demo_plazo_electronic_flag() -> None:
-    args = plazo_args("plazo de reposición, notificación electrónica enviada el 02/03/2026")
+    args = plazo_args("plazo de excepciones, notificación personal electrónica del 02/03/2026")
     assert args is not None
     assert args["notificacion_electronica"] is True
 
@@ -176,3 +185,9 @@ def test_demo_searches_sector_questions(text: str) -> None:
     model = DemoChatModel().bind_tools([buscar_documentos])
     assert isinstance(model, DemoChatModel)
     assert demo_call(model, text).tool_calls[0]["name"] == "buscar_documentos"
+
+
+def test_demo_email_word_does_not_set_electronic_flag() -> None:
+    args = plazo_args("me llegó por correo el auto, ¿plazo de reposición? 02/03/2026")
+    assert args is not None
+    assert args["notificacion_electronica"] is False

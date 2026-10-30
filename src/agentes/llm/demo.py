@@ -35,13 +35,15 @@ _DEADLINE_RE = re.compile(r"\b(plazo|t[ée]rmino|vence|vencimiento)")
 _DATE_RE = re.compile(r"\b(\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})\b")
 # Checked in order: the first matching keyword set wins.
 _ACTUACIONES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("tutela",), "impugnacion_tutela"),
     (("reposici",), "reposicion"),
     (("apela", "sentencia"), "apelacion_sentencia"),
     (("apela",), "apelacion_auto"),
     (("sumario",), "contestacion_verbal_sumario"),
     (("contesta",), "contestacion_verbal"),
     (("excepci",), "excepciones_ejecutivo"),
-    (("tutela",), "impugnacion_tutela"),
+    (("petici", "document"), "respuesta_peticion_documentos"),
+    (("petici", "consulta"), "respuesta_peticion_consulta"),
     (("petici",), "respuesta_derecho_peticion"),
 )
 _COMPANY_RE = re.compile(r"asistente virtual de (.+?), una empresa")
@@ -113,7 +115,10 @@ class DemoChatModel(BaseChatModel):
             args = {
                 "actuacion": actuacion,
                 "fecha_notificacion": date_match.group(1),
-                "notificacion_electronica": "electr" in text or "correo" in text,
+                # Only an explicit personal electronic notification; "me llegó por correo"
+                # usually means an auto notified by estado.
+                "notificacion_electronica": "personal" in text
+                and ("electr" in text or "mensaje de datos" in text),
             }
             return ToolCall(name="calcular_plazo", args=args, id=call_id)
         if "buscar_documentos" in self.tool_names and _SEARCH_RE.search(text):

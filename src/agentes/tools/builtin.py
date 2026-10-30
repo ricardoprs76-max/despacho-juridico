@@ -120,8 +120,9 @@ def parse_fecha(value: str) -> date | str:
             parsed = datetime.strptime(text, fmt).date()
         except ValueError:
             continue
-        if not 1900 <= parsed.year <= 2100:
-            return f"Fecha fuera de rango: {text}."
+        # The calculator encodes the CGP (in force since 2012) and Ley 51 de 1983 holidays.
+        if not 2012 <= parsed.year <= 2100:
+            return f"Fecha fuera de rango: {text} (se admiten fechas entre 2012 y 2100)."
         return parsed
     return f"Fecha no válida: {text}. Usa el formato DD/MM/AAAA."
 
@@ -135,7 +136,11 @@ class PlazoArgs(BaseModel):
     fecha_notificacion: str = Field(description="Fecha de notificación, DD/MM/AAAA.")
     notificacion_electronica: bool = Field(
         default=False,
-        description="True si se notificó por mensaje de datos (Ley 2213 de 2022).",
+        description=(
+            "True solo si fue notificación personal por mensaje de datos (Ley 2213 de 2022 "
+            "art. 8, p. ej. auto admisorio o mandamiento de pago). False para autos y "
+            "sentencias notificados por estado, aunque se hayan recibido por correo."
+        ),
     )
 
 

@@ -149,18 +149,34 @@ def test_plazo_tool_out_of_range_message(tmp_path: Path) -> None:
     text = _plazo_tool(tmp_path).invoke(
         {"actuacion": "reposicion", "fecha_notificacion": "01/01/1800"}
     )
-    assert text == "Fecha fuera de rango: 01/01/1800."
+    assert text == "Fecha fuera de rango: 01/01/1800 (se admiten fechas entre 2012 y 2100)."
 
 
 def test_plazo_tool_electronic(tmp_path: Path) -> None:
     text = _plazo_tool(tmp_path).invoke(
         {
-            "actuacion": "reposicion",
+            "actuacion": "excepciones_ejecutivo",
             "fecha_notificacion": "02/03/2026",
             "notificacion_electronica": True,
         }
     )
-    assert "Vence el 09/03/2026 (lunes)." in text
+    assert "Vence el 18/03/2026 (miércoles)." in text
+
+
+def test_plazo_tool_rejects_dates_before_cgp(tmp_path: Path) -> None:
+    text = _plazo_tool(tmp_path).invoke(
+        {"actuacion": "reposicion", "fecha_notificacion": "01/01/1990"}
+    )
+    assert text == "Fecha fuera de rango: 01/01/1990 (se admiten fechas entre 2012 y 2100)."
+
+
+def test_plazo_param_says_personal_notification(tmp_path: Path) -> None:
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    params = convert_to_openai_tool(_plazo_tool(tmp_path))["function"]["parameters"]
+    description = params["properties"]["notificacion_electronica"]["description"]
+    assert "personal" in description
+    assert "estado" in description
 
 
 def test_plazo_schema_enumerates_actuaciones(tmp_path: Path) -> None:

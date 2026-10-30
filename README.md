@@ -78,6 +78,7 @@ $ uv run agentes chat configs/despacho-juridico.yaml
 Tú: ¿Cuándo vence la reposición contra el auto notificado el 18/12/2025?
 Rincón & Asociados Abogados: Recurso de reposición (CGP art. 318): 3 días hábiles.
 Notificación: 18/12/2025. Corre desde 19/12/2025. Vence el 14/01/2026 (miércoles).
+Aplica a providencias dictadas fuera de audiencia; si se dictan en audiencia, el recurso se interpone en ella.
 Cálculo orientativo: verifique el expediente, suspensiones y días de cierre extraordinario del despacho.
 ```
 
@@ -89,10 +90,13 @@ Pure, exhaustively tested functions; the model only picks the procedural action 
   Holy Thursday/Friday and three Easter-based holidays moved to Monday.
 - **Business days (CGP art. 118):** day terms count business days only, from the day after notification.
 - **Judicial vacancy:** 20 December – 10 January and Monday–Wednesday of Holy Week; judicial terms do not run.
-- **Electronic notification (Ley 2213 de 2022 art. 8):** done once two business days have passed after sending.
+- **Personal notification by data message (Ley 2213 de 2022 art. 8):** done once two business days have passed
+  after sending (with the C-420 de 2020 caveat about acknowledgement of receipt). It only applies to terms that
+  start with a personal notification (answering a claim, exceptions); autos notified by *estado* do not get it.
 - **Administrative terms** (derecho de petición, Ley 1755 de 2015 art. 14) skip weekends and holidays but not the judicial vacancy.
-- **Catalogue:** reposición (3), apelación de auto/sentencia (3), contestación verbal (20) and verbal sumario (10),
-  excepciones en ejecutivo (10), impugnación de tutela (3), respuesta a derecho de petición (15).
+- **Catalogue:** reposición (3), apelación de auto/sentencia (3) — for decisions issued outside a hearing —,
+  contestación verbal (20) and verbal sumario (10), excepciones en ejecutivo (10), impugnación de tutela (3),
+  derecho de petición: general (15), documents/information (10), consultation (30).
 
 Every answer carries a disclaimer: it is an orientative calculation to be checked against the case file.
 

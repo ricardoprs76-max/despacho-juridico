@@ -68,3 +68,13 @@ def test_side_effect_tools_need_confirmation(path: Path) -> None:
     for tool in ("registrar_en_hoja", "enviar_correo"):
         if tool in config.tools:
             assert tool in config.confirm_tools
+
+
+def test_contract_model_is_marked_as_practice_material() -> None:
+    root = Path(__file__).resolve().parents[1]
+    text = (root / "data/demo/despacho/modelo-contrato-arrendamiento.md").read_text(
+        encoding="utf-8"
+    )
+    first_lines = "\n".join(text.splitlines()[:5])
+    assert "no usar como modelo" in first_lines.lower()
+    assert "cláusulas problemáticas" in first_lines.lower()

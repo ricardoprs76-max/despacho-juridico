@@ -1,6 +1,10 @@
-# Modelo de contrato de arrendamiento de vivienda urbana (documento ficticio de ejemplo)
+# Contrato de arrendamiento para práctica de revisión (documento ficticio)
 
-**CLÁUSULA PRIMERA — Objeto.** El arrendador entrega al arrendatario el inmueble ubicado en la calle 10 # 5-20 de Tunja para uso exclusivo de vivienda.
+> **No usar como modelo.** Este contrato contiene cláusulas problemáticas a propósito
+> (por ejemplo, las cláusulas quinta, sexta y octava) para practicar la revisión cláusula por
+> cláusula. Las partes, el inmueble y la dirección son inventados.
+
+**CLÁUSULA PRIMERA — Objeto.** El arrendador entrega al arrendatario el inmueble ubicado en la dirección ficticia «Calle Ejemplo 123, Ciudad Ficticia» para uso exclusivo de vivienda.
 
 **CLÁUSULA SEGUNDA — Canon.** El canon mensual es de 1.200.000 pesos, pagaderos dentro de los cinco primeros días de cada mes.
 

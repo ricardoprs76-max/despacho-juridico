@@ -57,10 +57,13 @@ Para usar un modelo real, copia `.env.example` a `.env` (o exporta la variable) 
 - **Festivos:** fijos, trasladados a lunes por la Ley 51 de 1983 (Ley Emiliani) y los que dependen de la Pascua.
 - **Días hábiles (CGP art. 118):** los términos en días cuentan solo días hábiles desde el día siguiente a la notificación.
 - **Vacancia judicial:** del 20 de diciembre al 10 de enero y de lunes a miércoles de Semana Santa.
-- **Notificación electrónica (Ley 2213 de 2022 art. 8):** se entiende surtida pasados dos días hábiles desde el envío.
+- **Notificación personal por mensaje de datos (Ley 2213 de 2022 art. 8):** se entiende surtida pasados dos días
+  hábiles desde el envío, con la salvedad de la sentencia C-420 de 2020 (acuse de recibo). Solo aplica a términos que
+  empiezan con notificación personal (contestación, excepciones); los autos notificados por estado no la tienen.
 - **Términos administrativos** (derecho de petición, Ley 1755 de 2015 art. 14): sin fines de semana ni festivos, pero sí corren en vacancia judicial.
-- **Catálogo:** reposición (3), apelación de auto y de sentencia (3), contestación en verbal (20) y en verbal sumario (10),
-  excepciones en ejecutivo (10), impugnación de tutela (3), respuesta a derecho de petición (15).
+- **Catálogo:** reposición (3), apelación de auto y de sentencia (3) —providencias dictadas fuera de audiencia—,
+  contestación en verbal (20) y en verbal sumario (10), excepciones en ejecutivo (10), impugnación de tutela (3),
+  derecho de petición: general (15), documentos o información (10), consultas (30).
 
 Cada respuesta incluye la advertencia de que es un cálculo orientativo que debe verificarse en el expediente.
 

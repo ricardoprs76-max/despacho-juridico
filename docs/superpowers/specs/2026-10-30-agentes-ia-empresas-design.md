@@ -101,7 +101,7 @@ docs/          architecture diagram, ADRs for key choices
    side-effecting tools, audit log.
 3. **Sector examples** — the 3 configs + fictional demo documents; law firm is
    the richest (contract clause review, deadline tracking, FAQ for clients).
-4. **API & demo** — FastAPI service, auth, web chat demo, MCP server.
+4. **API & demo** — FastAPI service, auth, web chat demo, MCP server. (4a done 2026-10-30; the MCP *client* — agent using external MCP tools — is deferred.)
    4b. **n8n integration** — flow templates, custom TypeScript node, docker-compose
    with n8n + agent.
 5. **Presentation** — README (EN) + README.es.md with GIF, architecture diagram,

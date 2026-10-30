@@ -71,6 +71,43 @@ Cada respuesta incluye la advertencia de que es un cálculo orientativo que debe
 **Fuera del alcance (límites conocidos):** despachos que no salen a vacancia colectiva, notificación por aviso
 (CGP art. 91) y suspensiones o cierres puntuales de un despacho.
 
+## API HTTP y demo web
+
+```bash
+uv run agentes serve configs/despacho-juridico.yaml      # http://127.0.0.1:8000
+```
+
+Abre `http://127.0.0.1:8000` para chatear: las acciones pendientes aparecen como un borrador con
+los botones **Confirmar / Cancelar** y cada uso de una herramienta queda en *Acciones registradas*.
+La documentación interactiva de la API está en `/docs`.
+
+| Método | Ruta | Qué hace |
+|--------|------|----------|
+| `GET` | `/health` | Empresa, modelo, modo demo y herramientas activas (sin clave) |
+| `POST` | `/chat` | `{"message", "thread_id"?}` → respuesta o acción que espera un sí |
+| `POST` | `/chat/{thread_id}/confirm` | `{"approved": true\|false}` → ejecuta o cancela la acción |
+| `GET` | `/chat/{thread_id}` | Historial de la conversación y acción pendiente |
+| `GET` | `/audit?thread_id=&limit=` | Acciones registradas, de la más reciente a la más antigua |
+
+Con `AGENTES_API_KEY` definida, todas las rutas salvo `/health` y la página piden el encabezado
+`X-API-Key`. Sin clave, el servidor solo escucha en `127.0.0.1`/`localhost` y rechaza
+`--host 0.0.0.0`. Los turnos van de uno en uno: un doble clic nunca ejecuta dos veces la misma
+acción (la segunda solicitud recibe `409`); si el modelo falla se responde `502` y la
+conversación sigue funcionando.
+
+## Servidor MCP
+
+```bash
+uv run agentes mcp configs/despacho-juridico.yaml        # por stdio
+```
+
+Cualquier cliente MCP (Claude Desktop, editores) puede usar el agente de la empresa. Herramientas:
+`preguntar` (hablar con el agente) y `confirmar` (responder a una acción pendiente), más las de
+solo lectura que active la configuración (`buscar_documentos`, `calcular_plazo`), que también
+quedan en el registro de auditoría. Las herramientas con efectos nunca se exponen directamente:
+solo se ejecutan con `preguntar` → `confirmar`. La configuración para Claude Desktop está en el
+[README en inglés](README.md#mcp-server).
+
 ## Configuración de la empresa
 
 | Campo | Obligatorio | Descripción |
@@ -92,7 +129,8 @@ Cada respuesta incluye la advertencia de que es un cálculo orientativo que debe
 - [x] **Fase 1 — Núcleo:** configuración, elección de modelo con modo demo, agente LangGraph con memoria, CLI.
 - [x] **Fase 2 — Herramientas y seguridad:** consulta de documentos con citas, Sheets y correo, confirmación humana, registro de auditoría.
 - [x] **Fase 3 — Ejemplos por sector:** despacho jurídico (plazos legales colombianos), tienda, clínica.
-- [ ] **Fase 4 — API e integraciones:** servicio FastAPI, demo web, servidor MCP, flujos y nodo propio de n8n.
+- [x] **Fase 4a — API y demo:** servicio FastAPI con clave de acceso, chat web en español, servidor MCP.
+- [ ] **Fase 4b — n8n:** plantillas de flujos, nodo propio de n8n en TypeScript, docker-compose.
 - [ ] **Fase 5 — Presentación:** Docker, GIF de demostración, pulido final.
 
 ## Licencia

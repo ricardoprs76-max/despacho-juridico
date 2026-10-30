@@ -29,6 +29,8 @@ flowchart LR
     Graph <-->|checkpoints per thread_id| DB[(SQLite)]
     Graph --> AGENT[Agent.ask / confirm / pending]
     AGENT --> CLI[agentes chat / auditoria / validate]
+    AGENT --> API[FastAPI: /chat · /confirm · /audit + web chat]
+    AGENT --> MCP[MCP server: preguntar · confirmar · read-only tools]
 ```
 
 | Module | Responsibility |
@@ -41,10 +43,18 @@ flowchart LR
 | `agentes.tools` | Builds only the tools a config enables, wired to their backends. |
 | `agentes.audit` | Append-only SQLite log of every tool call and its outcome. |
 | `agentes.graph` | The LangGraph state graph: model node, tools node with confirmation interrupts. |
-| `agentes.agent` | Facade: `ask`, `confirm`, `pending`, `history`; owns the SQLite connections. |
-| `agentes.cli` | Typer commands; forces UTF-8 for Windows consoles. |
+| `agentes.agent` | Facade: `ask`, `confirm`, `pending`, `history`, `run_tool` (read-only tools only); owns the SQLite connections. |
+| `agentes.api` | FastAPI app around one open `Agent`: API-key auth, one turn at a time, static Spanish web chat. |
+| `agentes.mcp` | MCP server (official SDK): the agent behind `preguntar`/`confirmar`, read-only tools exposed directly. |
+| `agentes.cli` | Typer commands (`chat`, `serve`, `mcp`, `auditoria`, `validate`); forces UTF-8 for Windows consoles. |
 
 Design decisions:
+
+- **Every surface keeps the same safety** — the CLI, the HTTP API, the web chat and the MCP
+  server all go through `Agent`, so side effects always stop at the same confirmation and land
+  in the same audit log. MCP never exposes a side-effecting tool directly.
+- **One turn at a time in the API** — a lock around every agent call makes a double click on
+  "Confirmar" a `409` instead of a second email, and keeps SQLite checkpoints consistent.
 
 - **Graph over a plain chain** — tool use and human confirmation are just more nodes and an
   `interrupt`, and the checkpointer gives persistence for free.

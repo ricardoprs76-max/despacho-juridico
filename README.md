@@ -104,6 +104,61 @@ Every answer carries a disclaimer: it is an orientative calculation to be checke
 **Out of scope (known limits):** courts that do not take the collective vacancy (they work during it),
 notification by *aviso* (CGP art. 91), ad hoc suspensions or closures of a specific court.
 
+## HTTP API and web demo
+
+```bash
+uv run agentes serve configs/despacho-juridico.yaml      # http://127.0.0.1:8000
+```
+
+Open `http://127.0.0.1:8000` for the Spanish chat: pending actions appear as a draft with
+**Confirmar / Cancelar** buttons and every tool call shows up under *Acciones registradas*.
+Interactive OpenAPI docs live at `/docs`.
+
+| Method | Route | What it does |
+|--------|-------|--------------|
+| `GET` | `/health` | Company, model, demo mode, enabled tools (no key needed) |
+| `POST` | `/chat` | `{"message", "thread_id"?}` → reply, or the action waiting for a yes |
+| `POST` | `/chat/{thread_id}/confirm` | `{"approved": true\|false}` → runs or cancels the pending action |
+| `GET` | `/chat/{thread_id}` | Conversation history and pending action |
+| `GET` | `/audit?thread_id=&limit=` | Tool calls, newest first |
+
+Set `AGENTES_API_KEY` to require the header `X-API-Key` on every route except `/health` and the
+page itself. Without a key the server only listens on `127.0.0.1`/`localhost` and refuses
+`--host 0.0.0.0`. Turns are serialised, so a double click never runs an action twice (the
+second request gets `409`); model failures return `502` and the conversation stays usable.
+
+```bash
+curl -s localhost:8000/chat -H "Content-Type: application/json" \
+  -d '{"message": "Manda un correo al cliente", "thread_id": "demo"}'
+# → {"thread_id":"demo","reply":"","pending":{"tool":"enviar_correo", ...}}
+curl -s localhost:8000/chat/demo/confirm -H "Content-Type: application/json" \
+  -d '{"approved": true}'
+```
+
+## MCP server
+
+```bash
+uv run agentes mcp configs/despacho-juridico.yaml        # stdio transport
+```
+
+Any MCP client (Claude Desktop, IDEs) can use the company's agent. Tools: `preguntar`
+(talk to the agent) and `confirmar` (answer a pending action), plus the read-only tools the
+config enables (`buscar_documentos`, `calcular_plazo`), which are recorded in the audit log
+like any other call. Side-effecting tools are never exposed directly: they only run through
+`preguntar` → `confirmar`. Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "despacho": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/agentes-ia-empresas", "run",
+               "agentes", "mcp", "configs/despacho-juridico.yaml"]
+    }
+  }
+}
+```
+
 ## Company config
 
 | Field | Required | Description |
@@ -138,7 +193,8 @@ Architecture overview: [docs/architecture.md](docs/architecture.md).
 - [x] **Phase 1 — Core:** config schema, provider factory with demo mode, LangGraph agent with memory, CLI.
 - [x] **Phase 2 — Tools & safety:** RAG over company documents with citations, Sheets and email tools, human-in-the-loop confirmation, audit log.
 - [x] **Phase 3 — Sector examples:** law firm (Colombian legal deadlines), shop, clinic.
-- [ ] **Phase 4 — API & integrations:** FastAPI service, web demo, MCP server, n8n flows and a custom n8n node.
+- [x] **Phase 4a — API & demo:** FastAPI service with API-key auth, Spanish web chat, MCP server.
+- [ ] **Phase 4b — n8n:** flow templates, a custom TypeScript n8n node, docker-compose.
 - [ ] **Phase 5 — Presentation:** Docker, demo GIF, final polish.
 
 ## License

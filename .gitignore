@@ -9,3 +9,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 dist/
+
+# n8n node package
+integrations/n8n/node/node_modules/
+integrations/n8n/node/dist/

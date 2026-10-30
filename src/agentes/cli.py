@@ -82,5 +82,5 @@ def chat(
             except AgentError as exc:
                 typer.echo(f"No se pudo obtener respuesta del modelo: {exc}", err=True)
                 continue
-            typer.echo(f"{cfg.company_name}: {reply}")
+            typer.echo(f"{cfg.company_name}: {reply.text}")
     typer.echo(GOODBYE)

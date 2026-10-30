@@ -15,7 +15,7 @@ def make_agent(config: AgentConfig, model: RecordingChatModel, db: Path) -> Agen
 def test_ask_returns_model_reply(example_config: AgentConfig, tmp_path: Path) -> None:
     model = RecordingChatModel(replies=["Claro, tenemos martillos."])
     with make_agent(example_config, model, tmp_path / "m.sqlite") as agent:
-        assert agent.ask("t1", "¿Tienen martillos?") == "Claro, tenemos martillos."
+        assert agent.ask("t1", "¿Tienen martillos?").text == "Claro, tenemos martillos."
 
 
 def test_system_prompt_sent_but_not_stored(example_config: AgentConfig, tmp_path: Path) -> None:

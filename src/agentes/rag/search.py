@@ -18,6 +18,16 @@ from agentes.rag.loader import Chunk
 NO_RESULTS = "No encontré información sobre eso en los documentos de la empresa."
 EMBEDDING_MODEL = "models/text-embedding-004"
 _WORD_RE = re.compile(r"\w+")
+# Common Spanish function words (accents already stripped); they match almost every
+# chunk and would drown out the words that carry the question's meaning.
+# fmt: off
+STOPWORDS = frozenset({
+    "a", "al", "algo", "como", "con", "cual", "cuales", "cuando", "de", "del", "donde", "el",
+    "ella", "en", "es", "esa", "ese", "esta", "este", "hay", "la", "las", "le", "les", "lo",
+    "los", "mas", "me", "mi", "no", "o", "para", "pero", "por", "que", "se", "si", "sin", "son",
+    "su", "sus", "te", "tu", "un", "una", "uno", "unos", "y", "ya", "yo",
+})
+# fmt: on
 
 
 @dataclass(frozen=True)
@@ -33,7 +43,7 @@ class KnowledgeBase(Protocol):
 def _tokens(text: str) -> list[str]:
     folded = unicodedata.normalize("NFKD", text.lower())
     without_accents = "".join(c for c in folded if not unicodedata.combining(c))
-    return _WORD_RE.findall(without_accents)
+    return [word for word in _WORD_RE.findall(without_accents) if word not in STOPWORDS]
 
 
 class Bm25KnowledgeBase:

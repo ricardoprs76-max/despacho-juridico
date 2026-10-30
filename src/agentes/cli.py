@@ -1,6 +1,8 @@
-"""Command-line interface: validate a company config and chat with its agent."""
+"""Command-line interface: validate a config, chat with its agent, read the audit log."""
 
 import io
+import json
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -8,7 +10,8 @@ from typing import Annotated
 import typer
 from dotenv import load_dotenv
 
-from agentes.agent import Agent, AgentError
+from agentes.agent import Agent, AgentError, AgentReply
+from agentes.audit import AuditLog, AuditStatus
 from agentes.config import AgentConfig, ConfigError, load_config
 from agentes.llm import build_chat_model
 
@@ -17,7 +20,27 @@ app = typer.Typer(help="Agentes IA para Empresas", no_args_is_help=True)
 EXIT_WORD = "salir"
 DEMO_NOTICE = "Modo demo: no hay clave de IA configurada. Las respuestas son de ejemplo."
 GOODBYE = "¡Hasta pronto!"
-DEFAULT_DB = Path(".agentes/memoria.sqlite")
+DEFAULT_DATA = Path(".agentes")
+MEMORY_FILE = "memoria.sqlite"
+YES = {"s", "si", "sí"}
+NO = {"n", "no"}
+STATUS_ES: dict[AuditStatus, str] = {
+    "executed": "ejecutada",
+    "rejected": "cancelada",
+    "error": "error",
+}
+
+ConfigArg = Annotated[Path, typer.Argument(help="Archivo YAML de la empresa.")]
+DataOpt = Annotated[
+    Path | None,
+    typer.Option(
+        help="Carpeta de datos: memoria, bandeja de salida y hoja (por defecto .agentes)."
+    ),
+]
+
+
+class _EndOfInput(Exception):
+    """The user closed the input (EOF or Ctrl+C)."""
 
 
 @app.callback()
@@ -25,9 +48,6 @@ def _main() -> None:
     """Agentes IA para Empresas."""
     # API keys may live in a .env file in the current folder; real env vars win.
     load_dotenv(Path.cwd() / ".env")
-
-
-ConfigArg = Annotated[Path, typer.Argument(help="Archivo YAML de la empresa.")]
 
 
 def _force_utf8() -> None:
@@ -45,6 +65,35 @@ def _load_or_exit(path: Path) -> AgentConfig:
         raise typer.Exit(code=2) from exc
 
 
+def _paths(data: Path | None, db: Path | None) -> tuple[Path, Path]:
+    """Resolve (data_dir, db_path); an explicit --db alone keeps its folder as data dir."""
+    if data is None:
+        data = db.parent if db is not None else DEFAULT_DATA
+    return data, db if db is not None else data / MEMORY_FILE
+
+
+def _read(prompt: str) -> str:
+    typer.echo(prompt, nl=False)
+    try:
+        return input()
+    except (EOFError, KeyboardInterrupt) as exc:
+        typer.echo()
+        raise _EndOfInput from exc
+
+
+def _show(agent: Agent, thread: str, reply: AgentReply) -> None:
+    """Print a reply, asking for confirmation as long as an action is pending."""
+    while reply.pending is not None:
+        typer.echo(f"Acción pendiente: {reply.pending.description}")
+        while True:
+            answer = _read("¿Confirmas? (s/n): ").strip().lower()
+            if answer in YES or answer in NO:
+                break
+        reply = agent.confirm(thread, approved=answer in YES)
+    if reply.text:
+        typer.echo(f"{agent.config.company_name}: {reply.text}")
+
+
 @app.command()
 def validate(config: ConfigArg) -> None:
     """Comprueba que el archivo de configuración es válido."""
@@ -57,30 +106,59 @@ def validate(config: ConfigArg) -> None:
 def chat(
     config: ConfigArg,
     thread: Annotated[str, typer.Option(help="Identificador de la conversación.")] = "default",
-    db: Annotated[Path, typer.Option(help="Archivo SQLite de la memoria.")] = DEFAULT_DB,
+    data: DataOpt = None,
+    db: Annotated[Path | None, typer.Option(help="Archivo SQLite de la memoria.")] = None,
 ) -> None:
     """Conversa con el agente de la empresa. Escribe 'salir' para terminar."""
     _force_utf8()
     cfg = _load_or_exit(config)
-    with Agent(cfg, build_chat_model(cfg.model), db_path=db) as agent:
+    data_dir, db_path = _paths(data, db)
+    with Agent(cfg, build_chat_model(cfg.model), db_path=db_path, data_dir=data_dir) as agent:
         if agent.is_demo:
             typer.echo(DEMO_NOTICE)
-        while True:
-            typer.echo("Tú: ", nl=False)
-            try:
-                line = input()
-            except (EOFError, KeyboardInterrupt):
-                typer.echo()
-                break
-            text = line.strip()
-            if not text:
-                continue
-            if text.lower() == EXIT_WORD:
-                break
-            try:
-                reply = agent.ask(thread, text)
-            except AgentError as exc:
-                typer.echo(f"No se pudo obtener respuesta del modelo: {exc}", err=True)
-                continue
-            typer.echo(f"{cfg.company_name}: {reply.text}")
+        for warning in agent.warnings:
+            typer.echo(f"Aviso: {warning}")
+        try:
+            pending = agent.pending(thread)
+            if pending is not None:
+                _show(agent, thread, AgentReply(text="", pending=pending))
+            while True:
+                text = _read("Tú: ").strip()
+                if not text:
+                    continue
+                if text.lower() == EXIT_WORD:
+                    break
+                try:
+                    _show(agent, thread, agent.ask(thread, text))
+                except AgentError as exc:
+                    typer.echo(f"No se pudo obtener respuesta del modelo: {exc}", err=True)
+        except _EndOfInput:
+            pass
     typer.echo(GOODBYE)
+
+
+@app.command()
+def auditoria(
+    config: ConfigArg,
+    thread: Annotated[str | None, typer.Option(help="Solo esta conversación.")] = None,
+    limit: Annotated[int, typer.Option(help="Número máximo de acciones.")] = 20,
+    data: DataOpt = None,
+) -> None:
+    """Muestra las acciones que ha ejecutado, cancelado o intentado el agente."""
+    _force_utf8()
+    _load_or_exit(config)
+    _, db_path = _paths(data, None)
+    if not db_path.exists():
+        typer.echo("No hay acciones registradas.")
+        return
+    conn = sqlite3.connect(db_path)
+    try:
+        entries = AuditLog(conn).entries(thread_id=thread, limit=limit)
+    finally:
+        conn.close()
+    if not entries:
+        typer.echo("No hay acciones registradas.")
+    for e in entries:
+        when = e.timestamp.astimezone().strftime("%Y-%m-%d %H:%M")
+        args = json.dumps(e.args, ensure_ascii=False)
+        typer.echo(f"{when} | {e.thread_id} | {e.tool} | {STATUS_ES[e.status]} | {args}")

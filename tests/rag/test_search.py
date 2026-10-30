@@ -69,3 +69,14 @@ def test_bm25_single_document_corpus_still_finds_match() -> None:
 def test_bm25_term_in_every_chunk_still_matches() -> None:
     chunks = [Chunk(f"Sede {n}: horario de 8 a 6.", f"sede{n}.md", None) for n in range(3)]
     assert len(Bm25KnowledgeBase(chunks).search("horario")) == 3
+
+
+def test_bm25_ignores_spanish_stopwords() -> None:
+    chunks = [
+        Chunk(
+            "Se hacen domicilios de lunes a sábado. El domicilio es gratis.", "domicilios.md", None
+        ),
+        Chunk("Atendemos en horario de 7 a 6.", "horarios.md", None),
+    ]
+    hits = Bm25KnowledgeBase(chunks).search("¿Cuál es el horario?")
+    assert [h.chunk.source for h in hits] == ["horarios.md"]

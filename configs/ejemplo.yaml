@@ -9,3 +9,11 @@ rules:
   - Para reclamos, pide el número de factura y un teléfono de contacto.
 model:
   provider: gemini
+knowledge_dir: ../data/demo/ferreteria
+tools:
+  - buscar_documentos
+  - registrar_en_hoja
+  - enviar_correo
+confirm_tools:
+  - registrar_en_hoja
+  - enviar_correo

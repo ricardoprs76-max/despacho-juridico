@@ -2,6 +2,8 @@
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import date, datetime
+from enum import StrEnum
 from pathlib import Path
 
 from langchain_core.tools import BaseTool, StructuredTool
@@ -9,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from agentes.config import AgentConfig
 from agentes.integrations import Mailer, SheetBackend, mailer_from_env, sheet_from_env
+from agentes.legal.plazos import CATALOGO, PlazoDesconocido, calcular_plazo
 from agentes.rag import (
     Bm25KnowledgeBase,
     KnowledgeBase,
@@ -106,10 +109,65 @@ def _email(ctx: ToolContext) -> BaseTool:
     )
 
 
+DATE_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y")
+
+
+def parse_fecha(value: str) -> date | str:
+    """A date, or a one-line Spanish error to hand back to the model."""
+    text = value.strip()
+    for fmt in DATE_FORMATS:
+        try:
+            parsed = datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+        if not 1900 <= parsed.year <= 2100:
+            return f"Fecha fuera de rango: {text}."
+        return parsed
+    return f"Fecha no válida: {text}. Usa el formato DD/MM/AAAA."
+
+
+# Built from the catalogue so the model sees the exact list of valid keys.
+Actuacion = StrEnum("Actuacion", {key: key for key in sorted(CATALOGO)})  # type: ignore[misc]
+
+
+class PlazoArgs(BaseModel):
+    actuacion: Actuacion = Field(description="Actuación procesal.")
+    fecha_notificacion: str = Field(description="Fecha de notificación, DD/MM/AAAA.")
+    notificacion_electronica: bool = Field(
+        default=False,
+        description="True si se notificó por mensaje de datos (Ley 2213 de 2022).",
+    )
+
+
+def _plazo(ctx: ToolContext) -> BaseTool:
+    def calcular(
+        actuacion: str, fecha_notificacion: str, notificacion_electronica: bool = False
+    ) -> str:
+        fecha = parse_fecha(fecha_notificacion)
+        if isinstance(fecha, str):
+            return fecha
+        try:
+            return calcular_plazo(str(actuacion), fecha, notificacion_electronica).texto()
+        except PlazoDesconocido as exc:
+            return str(exc)
+
+    options = "; ".join(f"{t.clave} = {t.nombre} ({t.dias} días)" for t in CATALOGO.values())
+    return StructuredTool.from_function(
+        calcular,
+        name="calcular_plazo",
+        args_schema=PlazoArgs,
+        description=(
+            "Calcula el vencimiento de un término procesal colombiano en días hábiles "
+            "(CGP art. 118, festivos y vacancia judicial). Actuaciones: " + options + "."
+        ),
+    )
+
+
 _FACTORIES: dict[str, Callable[[ToolContext], BaseTool]] = {
     "buscar_documentos": _search,
     "registrar_en_hoja": _sheet,
     "enviar_correo": _email,
+    "calcular_plazo": _plazo,
 }
 
 

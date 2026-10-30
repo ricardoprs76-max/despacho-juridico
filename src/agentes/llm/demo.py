@@ -28,6 +28,19 @@ _GREETING_RE = re.compile(r"\b(hola|buenos días|buenas tardes|buenas noches|bue
 _SEARCH_RE = re.compile(r"\b(horario|precio|pol[ií]tica|garant[ií]a|documento)")
 _SHEET_RE = re.compile(r"\b(registra|anota)")
 _EMAIL_RE = re.compile(r"\b(correo|email)")
+_DEADLINE_RE = re.compile(r"\b(plazo|t[ée]rmino|vence|vencimiento)")
+_DATE_RE = re.compile(r"\b(\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})\b")
+# Checked in order: the first matching keyword set wins.
+_ACTUACIONES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("reposici",), "reposicion"),
+    (("apela", "sentencia"), "apelacion_sentencia"),
+    (("apela",), "apelacion_auto"),
+    (("sumario",), "contestacion_verbal_sumario"),
+    (("contesta",), "contestacion_verbal"),
+    (("excepci",), "excepciones_ejecutivo"),
+    (("tutela",), "impugnacion_tutela"),
+    (("petici",), "respuesta_derecho_peticion"),
+)
 _COMPANY_RE = re.compile(r"asistente virtual de (.+?), una empresa")
 
 
@@ -88,6 +101,18 @@ class DemoChatModel(BaseChatModel):
         return AIMessage(content=DEMO_PREFIX + answer)
 
     def _tool_call_for(self, text: str, original: str, call_id: str) -> ToolCall | None:
+        date_match = _DATE_RE.search(text)
+        if "calcular_plazo" in self.tool_names and _DEADLINE_RE.search(text) and date_match:
+            actuacion = next(
+                (key for words, key in _ACTUACIONES if all(w in text for w in words)),
+                "reposicion",
+            )
+            args = {
+                "actuacion": actuacion,
+                "fecha_notificacion": date_match.group(1),
+                "notificacion_electronica": "electr" in text or "correo" in text,
+            }
+            return ToolCall(name="calcular_plazo", args=args, id=call_id)
         if "buscar_documentos" in self.tool_names and _SEARCH_RE.search(text):
             return ToolCall(name="buscar_documentos", args={"consulta": original}, id=call_id)
         if "registrar_en_hoja" in self.tool_names and _SHEET_RE.search(text):

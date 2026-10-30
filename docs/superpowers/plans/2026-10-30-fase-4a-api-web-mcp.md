@@ -58,9 +58,16 @@ Expected: lock updated, `python -m uv run python -c "import fastapi, uvicorn"` e
 ```python
 def test_health_reports_company_and_mode(make_client):
     body = make_client([]).get("/health").json()
-    assert body == {"status": "ok", "company": "Ferretería El Tornillo",
-                    "sector": "ferretería y materiales de construcción", "demo": False,
-                    "provider": "test", "model": "recording", "auth": False}
+    assert body == {
+        "status": "ok",
+        "company": "Ferretería El Tornillo",
+        "sector": "ferretería y materiales de construcción",
+        "demo": False,
+        "provider": "test",
+        "model": "recording",
+        "auth": False,
+    }
+
 
 def test_chat_new_thread_then_continue(make_client):
     client = make_client(["Hola, ¿en qué te ayudo?", "Abrimos a las 7."])
@@ -72,25 +79,38 @@ def test_chat_new_thread_then_continue(make_client):
     hist = client.get(f"/chat/{first['thread_id']}").json()
     assert [m["role"] for m in hist["messages"]] == ["user", "assistant", "user", "assistant"]
 
+
 def test_side_effect_waits_for_confirmation(make_client, tmp_path):
     # model asks to send an email (AIMessage with tool_calls for enviar_correo), then answers
     ...  # reply 1 = tool call, reply 2 = "Listo, correo enviado."
     r = client.post("/chat", json={"message": "envía el correo", "thread_id": "t1"}).json()
     assert r["reply"] == "" and r["pending"]["tool"] == "enviar_correo"
     assert "Enviar correo a ana@example.com" in r["pending"]["description"]
-    assert not (tmp_path / "bandeja_salida").exists() or not any((tmp_path / "bandeja_salida").iterdir())
+    assert not (tmp_path / "bandeja_salida").exists() or not any(
+        (tmp_path / "bandeja_salida").iterdir()
+    )
     done = client.post("/chat/t1/confirm", json={"approved": True}).json()
     assert done == {"thread_id": "t1", "reply": "Listo, correo enviado.", "pending": None}
 
-def test_second_confirm_is_409(make_client): ...      # after confirming, confirm again → 409, detail "No hay ninguna acción pendiente de confirmar."
-def test_message_while_pending_is_409(make_client): ... # detail "Primero confirma o cancela la acción pendiente."
-def test_concurrent_confirms_run_action_once(make_client): ...  # two threads POST confirm at once → one 200, one 409; outbox has exactly 1 email
-def test_model_failure_is_502_and_thread_recovers(make_client): ...  # replies [RuntimeError("cuota"), "Ahora sí."] → 502 detail contains "cuota"; next message → 200 "Ahora sí."
+
+def test_second_confirm_is_409(
+    make_client,
+): ...  # after confirming, confirm again → 409, detail "No hay ninguna acción pendiente de confirmar."
+def test_message_while_pending_is_409(
+    make_client,
+): ...  # detail "Primero confirma o cancela la acción pendiente."
+def test_concurrent_confirms_run_action_once(
+    make_client,
+): ...  # two threads POST confirm at once → one 200, one 409; outbox has exactly 1 email
+def test_model_failure_is_502_and_thread_recovers(
+    make_client,
+): ...  # replies [RuntimeError("cuota"), "Ahora sí."] → 502 detail contains "cuota"; next message → 200 "Ahora sí."
 @pytest.mark.parametrize("thread", ["../x", "a" * 65, "con espacio"])
 def test_bad_thread_id_is_422(make_client, thread): ...  # POST /chat with that thread_id → 422
 @pytest.mark.parametrize("message", ["", "   ", "x" * 4001])
 def test_bad_message_is_422(make_client, message): ...
-def test_api_key_required_when_set(make_client): ...
+def test_api_key_required_when_set(make_client):
+    ...
     # api_key="s3creta": /chat, /chat/t/confirm, /chat/t, /audit without header → 401;
     # wrong header → 401; right header → not 401; /health → 200 with "auth": True;
     # "s3creta" not in any response text.

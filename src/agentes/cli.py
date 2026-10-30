@@ -178,6 +178,23 @@ def serve(
         uvicorn.run(create_app(agent, api_key), host=host, port=port)
 
 
+@app.command("mcp")
+def mcp_server(config: ConfigArg, data: DataOpt = None) -> None:
+    """Sirve el agente como servidor MCP por stdio (para Claude Desktop y otros clientes)."""
+    from agentes.mcp import build_mcp_server
+
+    _force_utf8()
+    cfg = _load_or_exit(config)
+    data_dir, db_path = _paths(data, None)
+    with Agent(cfg, build_chat_model(cfg.model), db_path=db_path, data_dir=data_dir) as agent:
+        # stdout carries the MCP protocol; every human notice goes to stderr.
+        if agent.is_demo:
+            typer.echo(DEMO_NOTICE, err=True)
+        for warning in agent.warnings:
+            typer.echo(f"Aviso: {warning}", err=True)
+        build_mcp_server(agent).run("stdio")
+
+
 @app.command()
 def auditoria(
     config: ConfigArg,

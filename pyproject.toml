@@ -25,6 +25,7 @@ dependencies = [
     "snowballstemmer>=3.1.1",
     "fastapi>=0.115",
     "uvicorn>=0.30",
+    "mcp>=2.0",
 ]
 
 [project.scripts]

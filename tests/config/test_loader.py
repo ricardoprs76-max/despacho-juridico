@@ -5,7 +5,7 @@ import pytest
 from agentes.config import AgentConfig, ConfigError, load_config
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-EXAMPLE = REPO_ROOT / "configs" / "ejemplo.yaml"
+EXAMPLE = REPO_ROOT / "configs" / "tienda.yaml"
 
 MINIMAL = """\
 id: prueba

@@ -1,5 +1,5 @@
-# Ejemplo mínimo: una ferretería ficticia.
-id: ferreteria-el-tornillo
+# Tienda: una ferretería ficticia de barrio.
+id: tienda
 company_name: Ferretería El Tornillo
 sector: ferretería y materiales de construcción
 tone: cercano y práctico, como un vendedor de barrio que sabe de herramientas

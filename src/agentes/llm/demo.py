@@ -25,9 +25,27 @@ GENERIC_ANSWER = (
     "(por ejemplo GOOGLE_API_KEY, que es gratis) para obtener respuestas de verdad."
 )
 _GREETING_RE = re.compile(r"\b(hola|buenos días|buenas tardes|buenas noches|buenas)\b")
-_SEARCH_RE = re.compile(r"\b(horario|precio|pol[ií]tica|garant[ií]a|documento)")
+_SEARCH_RE = re.compile(
+    r"\b(horario|precio|cuesta|cu[aá]nto|tarifa|costo|valor|pol[ií]tica|garant[ií]a|documento"
+    r"|domicilio|examen|ex[aá]menes|cita|cancelar|contrato|cl[aá]usula|requisito|convenio)"
+)
 _SHEET_RE = re.compile(r"\b(registra|anota)")
 _EMAIL_RE = re.compile(r"\b(correo|email)")
+_DEADLINE_RE = re.compile(r"\b(plazo|t[ée]rmino|vence|vencimiento)")
+_DATE_RE = re.compile(r"\b(\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2})\b")
+# Checked in order: the first matching keyword set wins.
+_ACTUACIONES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("tutela",), "impugnacion_tutela"),
+    (("reposici",), "reposicion"),
+    (("apela", "sentencia"), "apelacion_sentencia"),
+    (("apela",), "apelacion_auto"),
+    (("sumario",), "contestacion_verbal_sumario"),
+    (("contesta",), "contestacion_verbal"),
+    (("excepci",), "excepciones_ejecutivo"),
+    (("petici", "document"), "respuesta_peticion_documentos"),
+    (("petici", "consulta"), "respuesta_peticion_consulta"),
+    (("petici",), "respuesta_derecho_peticion"),
+)
 _COMPANY_RE = re.compile(r"asistente virtual de (.+?), una empresa")
 
 
@@ -88,6 +106,21 @@ class DemoChatModel(BaseChatModel):
         return AIMessage(content=DEMO_PREFIX + answer)
 
     def _tool_call_for(self, text: str, original: str, call_id: str) -> ToolCall | None:
+        date_match = _DATE_RE.search(text)
+        if "calcular_plazo" in self.tool_names and _DEADLINE_RE.search(text) and date_match:
+            actuacion = next(
+                (key for words, key in _ACTUACIONES if all(w in text for w in words)),
+                "reposicion",
+            )
+            args = {
+                "actuacion": actuacion,
+                "fecha_notificacion": date_match.group(1),
+                # Only an explicit personal electronic notification; "me llegó por correo"
+                # usually means an auto notified by estado.
+                "notificacion_electronica": "personal" in text
+                and ("electr" in text or "mensaje de datos" in text),
+            }
+            return ToolCall(name="calcular_plazo", args=args, id=call_id)
         if "buscar_documentos" in self.tool_names and _SEARCH_RE.search(text):
             return ToolCall(name="buscar_documentos", args={"consulta": original}, id=call_id)
         if "registrar_en_hoja" in self.tool_names and _SHEET_RE.search(text):

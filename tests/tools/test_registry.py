@@ -28,7 +28,12 @@ def knowledge(tmp_path: Path) -> Path:
 
 
 def test_names() -> None:
-    assert {"buscar_documentos", "registrar_en_hoja", "enviar_correo"} == TOOL_NAMES
+    assert {
+        "buscar_documentos",
+        "registrar_en_hoja",
+        "enviar_correo",
+        "calcular_plazo",
+    } == TOOL_NAMES
     assert {"registrar_en_hoja", "enviar_correo"} == SIDE_EFFECT_TOOLS
 
 
@@ -111,3 +116,79 @@ def test_side_effect_tool_without_confirmation_warns(tmp_path: Path) -> None:
     cfg = config(["enviar_correo"])
     ctx = build_context(cfg, tmp_path, env={})
     assert ctx.warnings == ("enviar_correo se ejecutará sin pedir confirmación.",)
+
+
+def _plazo_tool(tmp_path: Path):  # type: ignore[no-untyped-def]
+    cfg = config(["calcular_plazo"])
+    [tool] = build_tools(cfg, build_context(cfg, tmp_path, env={}))
+    return tool
+
+
+def test_plazo_tool_returns_text(tmp_path: Path) -> None:
+    text = _plazo_tool(tmp_path).invoke(
+        {"actuacion": "reposicion", "fecha_notificacion": "02/03/2026"}
+    )
+    assert "Vence el 05/03/2026 (jueves)." in text
+    assert text.endswith("extraordinario del despacho.")
+
+
+@pytest.mark.parametrize("value", ["2026-03-02", "02/03/2026", "02-03-2026", "2/3/2026"])
+def test_plazo_tool_accepts_date_formats(tmp_path: Path, value: str) -> None:
+    text = _plazo_tool(tmp_path).invoke({"actuacion": "reposicion", "fecha_notificacion": value})
+    assert "Notificación: 02/03/2026." in text
+
+
+def test_plazo_tool_bad_date_message(tmp_path: Path) -> None:
+    text = _plazo_tool(tmp_path).invoke(
+        {"actuacion": "reposicion", "fecha_notificacion": "31/02/2026"}
+    )
+    assert text == "Fecha no válida: 31/02/2026. Usa el formato DD/MM/AAAA."
+
+
+def test_plazo_tool_out_of_range_message(tmp_path: Path) -> None:
+    text = _plazo_tool(tmp_path).invoke(
+        {"actuacion": "reposicion", "fecha_notificacion": "01/01/1800"}
+    )
+    assert text == "Fecha fuera de rango: 01/01/1800 (se admiten fechas entre 2012 y 2100)."
+
+
+def test_plazo_tool_electronic(tmp_path: Path) -> None:
+    text = _plazo_tool(tmp_path).invoke(
+        {
+            "actuacion": "excepciones_ejecutivo",
+            "fecha_notificacion": "02/03/2026",
+            "notificacion_electronica": True,
+        }
+    )
+    assert "Vence el 18/03/2026 (miércoles)." in text
+
+
+def test_plazo_tool_rejects_dates_before_cgp(tmp_path: Path) -> None:
+    text = _plazo_tool(tmp_path).invoke(
+        {"actuacion": "reposicion", "fecha_notificacion": "01/01/1990"}
+    )
+    assert text == "Fecha fuera de rango: 01/01/1990 (se admiten fechas entre 2012 y 2100)."
+
+
+def test_plazo_param_says_personal_notification(tmp_path: Path) -> None:
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    params = convert_to_openai_tool(_plazo_tool(tmp_path))["function"]["parameters"]
+    description = params["properties"]["notificacion_electronica"]["description"]
+    assert "personal" in description
+    assert "estado" in description
+
+
+def test_plazo_schema_enumerates_actuaciones(tmp_path: Path) -> None:
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    from agentes.legal.plazos import CATALOGO
+
+    params = convert_to_openai_tool(_plazo_tool(tmp_path))["function"]["parameters"]
+    assert sorted(params["properties"]["actuacion"]["enum"]) == sorted(CATALOGO)
+    assert params["required"] == ["actuacion", "fecha_notificacion"]
+
+
+def test_plazo_is_read_only() -> None:
+    assert "calcular_plazo" in TOOL_NAMES
+    assert "calcular_plazo" not in SIDE_EFFECT_TOOLS

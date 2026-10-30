@@ -36,6 +36,7 @@ flowchart LR
 | `agentes.config` | Pydantic schema for a company, YAML loading with one-line Spanish errors. |
 | `agentes.llm` | Chooses the chat model; falls back to a deterministic offline demo model that can also call tools. |
 | `agentes.rag` | Loads `.md`/`.txt`/`.pdf` into chunks; BM25+ search offline, embeddings with a key; formats cited passages. |
+| `agentes.legal` | Colombian holidays, business-day arithmetic (CGP art. 118, judicial vacancy, Ley 2213) and the procedural-term catalogue behind `calcular_plazo`. |
 | `agentes.integrations` | Sheet (CSV / Google Sheets) and email (outbox / SMTP) backends. |
 | `agentes.tools` | Builds only the tools a config enables, wired to their backends. |
 | `agentes.audit` | Append-only SQLite log of every tool call and its outcome. |
@@ -54,6 +55,11 @@ Design decisions:
   fail on its own arguments.
 - **BM25+ offline fallback** — RAG must work without any key; BM25+ keeps scores positive for
   tiny corpora (a company with one document) and Spanish stopwords are dropped.
+- **Legal rules as pure functions** — holidays and deadlines are plain, exhaustively tested
+  date arithmetic; the model only chooses the procedural action and the date, so it cannot
+  miscount days.
+- **Spanish stemming in keyword search** — "incumplo" must find "incumple"; snowball stemming
+  plus stopword removal keeps the offline search useful for real questions.
 - **Separate SQLite connection for the audit log** — the checkpointer commits from LangGraph's
   worker threads; sharing its connection raced.
 - **Demo model instead of failing without a key** — the project must be runnable by anyone who

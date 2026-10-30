@@ -26,6 +26,7 @@ pip install uv            # if you don't have it
 uv sync
 uv run agentes validate configs/tienda.yaml
 uv run agentes chat configs/tienda.yaml
+uv run agentes chat configs/despacho-juridico.yaml
 ```
 
 To use a real model, copy `.env.example` to `.env` (or export the variable) and set
@@ -64,6 +65,37 @@ $ uv run agentes auditoria configs/tienda.yaml
   failed action. The log has no edit or delete operations.
 - `--data PATH` (default `.agentes/`) holds memory, outbox and sheet.
 
+## Sector examples
+
+| Config | Company (fictional) | What it shows |
+|--------|---------------------|---------------|
+| `configs/despacho-juridico.yaml` | Rincón & Asociados Abogados | Colombian legal deadlines (`calcular_plazo`), clause-by-clause contract review, fees FAQ, case intake into the sheet |
+| `configs/tienda.yaml` | Ferretería El Tornillo | Opening hours, warranties, delivery rules |
+| `configs/clinica.yaml` | Clínica Sol del Valle | Exam preparation, insurers, cancellations; never diagnoses, sends emergencies to 123 |
+
+```
+$ uv run agentes chat configs/despacho-juridico.yaml
+Tú: ¿Cuándo vence la reposición contra el auto notificado el 18/12/2025?
+Rincón & Asociados Abogados: Recurso de reposición (CGP art. 318): 3 días hábiles.
+Notificación: 18/12/2025. Corre desde 19/12/2025. Vence el 14/01/2026 (miércoles).
+Cálculo orientativo: verifique el expediente, suspensiones y días de cierre extraordinario del despacho.
+```
+
+### Colombian legal deadlines (`agentes.legal`)
+
+Pure, exhaustively tested functions; the model only picks the procedural action and the date.
+
+- **Holidays:** fixed dates; Ley 51 de 1983 (*Ley Emiliani*) moves seven of them to Monday;
+  Holy Thursday/Friday and three Easter-based holidays moved to Monday.
+- **Business days (CGP art. 118):** day terms count business days only, from the day after notification.
+- **Judicial vacancy:** 20 December – 10 January and Monday–Wednesday of Holy Week; judicial terms do not run.
+- **Electronic notification (Ley 2213 de 2022 art. 8):** done once two business days have passed after sending.
+- **Administrative terms** (derecho de petición, Ley 1755 de 2015 art. 14) skip weekends and holidays but not the judicial vacancy.
+- **Catalogue:** reposición (3), apelación de auto/sentencia (3), contestación verbal (20) and verbal sumario (10),
+  excepciones en ejecutivo (10), impugnación de tutela (3), respuesta a derecho de petición (15).
+
+Every answer carries a disclaimer: it is an orientative calculation to be checked against the case file.
+
 ## Company config
 
 | Field | Required | Description |
@@ -76,7 +108,7 @@ $ uv run agentes auditoria configs/tienda.yaml
 | `model.provider` | no | `gemini` (default), `anthropic` or `openai`. |
 | `model.model` | no | Model name; a sensible default per provider. |
 | `model.temperature` | no | `0`–`1`, default `0.2`. |
-| `tools` | no | Enabled tools: `buscar_documentos`, `registrar_en_hoja`, `enviar_correo`. |
+| `tools` | no | Enabled tools: `buscar_documentos`, `registrar_en_hoja`, `enviar_correo`, `calcular_plazo`. |
 | `confirm_tools` | no | Subset of `tools` that needs a human yes/no before running. |
 | `knowledge_dir` | no | Folder with the company's documents, relative to the YAML. |
 
@@ -97,7 +129,7 @@ Architecture overview: [docs/architecture.md](docs/architecture.md).
 
 - [x] **Phase 1 — Core:** config schema, provider factory with demo mode, LangGraph agent with memory, CLI.
 - [x] **Phase 2 — Tools & safety:** RAG over company documents with citations, Sheets and email tools, human-in-the-loop confirmation, audit log.
-- [ ] **Phase 3 — Sector examples:** law firm (Colombian legal deadlines), shop, clinic.
+- [x] **Phase 3 — Sector examples:** law firm (Colombian legal deadlines), shop, clinic.
 - [ ] **Phase 4 — API & integrations:** FastAPI service, web demo, MCP server, n8n flows and a custom n8n node.
 - [ ] **Phase 5 — Presentation:** Docker, demo GIF, final polish.
 

@@ -44,6 +44,26 @@ Para usar un modelo real, copia `.env.example` a `.env` (o exporta la variable) 
   la pregunta pendiente sobrevive a un reinicio.
 - `agentes auditoria CONFIG` muestra cada acción ejecutada, cancelada o fallida.
 
+## Ejemplos por sector
+
+| Configuración | Empresa (ficticia) | Qué muestra |
+|---------------|--------------------|-------------|
+| `configs/despacho-juridico.yaml` | Rincón & Asociados Abogados | Plazos procesales colombianos (`calcular_plazo`), revisión de contratos cláusula por cláusula, tarifas, registro de casos |
+| `configs/tienda.yaml` | Ferretería El Tornillo | Horarios, garantías, domicilios |
+| `configs/clinica.yaml` | Clínica Sol del Valle | Preparación de exámenes, convenios, cancelaciones; nunca diagnostica y remite emergencias al 123 |
+
+### Plazos procesales colombianos (`agentes.legal`)
+
+- **Festivos:** fijos, trasladados a lunes por la Ley 51 de 1983 (Ley Emiliani) y los que dependen de la Pascua.
+- **Días hábiles (CGP art. 118):** los términos en días cuentan solo días hábiles desde el día siguiente a la notificación.
+- **Vacancia judicial:** del 20 de diciembre al 10 de enero y de lunes a miércoles de Semana Santa.
+- **Notificación electrónica (Ley 2213 de 2022 art. 8):** se entiende surtida pasados dos días hábiles desde el envío.
+- **Términos administrativos** (derecho de petición, Ley 1755 de 2015 art. 14): sin fines de semana ni festivos, pero sí corren en vacancia judicial.
+- **Catálogo:** reposición (3), apelación de auto y de sentencia (3), contestación en verbal (20) y en verbal sumario (10),
+  excepciones en ejecutivo (10), impugnación de tutela (3), respuesta a derecho de petición (15).
+
+Cada respuesta incluye la advertencia de que es un cálculo orientativo que debe verificarse en el expediente.
+
 ## Configuración de la empresa
 
 | Campo | Obligatorio | Descripción |
@@ -56,7 +76,7 @@ Para usar un modelo real, copia `.env.example` a `.env` (o exporta la variable) 
 | `model.provider` | no | `gemini` (por defecto), `anthropic` u `openai`. |
 | `model.model` | no | Nombre del modelo; hay uno por defecto para cada proveedor. |
 | `model.temperature` | no | De `0` a `1`; por defecto `0.2`. |
-| `tools` | no | Herramientas activas: `buscar_documentos`, `registrar_en_hoja`, `enviar_correo`. |
+| `tools` | no | Herramientas activas: `buscar_documentos`, `registrar_en_hoja`, `enviar_correo`, `calcular_plazo`. |
 | `confirm_tools` | no | Las de `tools` que piden un sí o un no antes de ejecutarse. |
 | `knowledge_dir` | no | Carpeta con los documentos de la empresa, relativa al YAML. |
 
@@ -64,7 +84,7 @@ Para usar un modelo real, copia `.env.example` a `.env` (o exporta la variable) 
 
 - [x] **Fase 1 — Núcleo:** configuración, elección de modelo con modo demo, agente LangGraph con memoria, CLI.
 - [x] **Fase 2 — Herramientas y seguridad:** consulta de documentos con citas, Sheets y correo, confirmación humana, registro de auditoría.
-- [ ] **Fase 3 — Ejemplos por sector:** despacho jurídico (plazos legales colombianos), tienda, clínica.
+- [x] **Fase 3 — Ejemplos por sector:** despacho jurídico (plazos legales colombianos), tienda, clínica.
 - [ ] **Fase 4 — API e integraciones:** servicio FastAPI, demo web, servidor MCP, flujos y nodo propio de n8n.
 - [ ] **Fase 5 — Presentación:** Docker, GIF de demostración, pulido final.
 

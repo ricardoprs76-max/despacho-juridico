@@ -89,7 +89,8 @@ Pure, exhaustively tested functions; the model only picks the procedural action 
 - **Holidays:** fixed dates; Ley 51 de 1983 (*Ley Emiliani*) moves seven of them to Monday;
   Holy Thursday/Friday and three Easter-based holidays moved to Monday.
 - **Business days (CGP art. 118):** day terms count business days only, from the day after notification.
-- **Judicial vacancy:** 20 December – 10 January and Monday–Wednesday of Holy Week; judicial terms do not run.
+- **Judicial vacancy:** 20 December – 10 January and Monday–Wednesday of Holy Week; judicial terms do not run,
+  except tutela terms, which keep running.
 - **Personal notification by data message (Ley 2213 de 2022 art. 8):** done once two business days have passed
   after sending (with the C-420 de 2020 caveat about acknowledgement of receipt). It only applies to terms that
   start with a personal notification (answering a claim, exceptions); autos notified by *estado* do not get it.
@@ -99,6 +100,9 @@ Pure, exhaustively tested functions; the model only picks the procedural action 
   derecho de petición: general (15), documents/information (10), consultation (30).
 
 Every answer carries a disclaimer: it is an orientative calculation to be checked against the case file.
+
+**Out of scope (known limits):** courts that do not take the collective vacancy (they work during it),
+notification by *aviso* (CGP art. 91), ad hoc suspensions or closures of a specific court.
 
 ## Company config
 

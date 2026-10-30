@@ -189,3 +189,22 @@ def test_texto_electronic_line() -> None:
         "el acuse de recibo o desde que se constate el acceso al mensaje."
     ) in text
     assert "Vence el 18/03/2026 (miércoles)." in text
+
+
+def test_tutela_runs_during_vacancy() -> None:
+    # Fri 18/12/2026 -> Mon 21, Tue 22, Wed 23 (vacancy does not stop tutela)
+    result = calcular_plazo("impugnacion_tutela", date(2026, 12, 18))
+    assert result.vencimiento == date(2026, 12, 23)
+    # Holy Week 2026: Mon 30/03 - Wed 01/04 count; Thu/Fri are holidays
+    result = calcular_plazo("impugnacion_tutela", date(2026, 3, 27))
+    assert result.vencimiento == date(2026, 4, 1)
+
+
+def test_tutela_text_mentions_vacancy() -> None:
+    text = calcular_plazo("impugnacion_tutela", date(2026, 12, 18)).texto()
+    assert "Notificación: 18/12/2026." in text
+    assert "Los términos de tutela corren durante la vacancia judicial." in text
+
+
+def test_only_tutela_runs_in_vacancy() -> None:
+    assert [k for k, t in CATALOGO.items() if t.corre_en_vacancia] == ["impugnacion_tutela"]

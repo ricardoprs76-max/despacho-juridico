@@ -56,7 +56,8 @@ Para usar un modelo real, copia `.env.example` a `.env` (o exporta la variable) 
 
 - **Festivos:** fijos, trasladados a lunes por la Ley 51 de 1983 (Ley Emiliani) y los que dependen de la Pascua.
 - **Días hábiles (CGP art. 118):** los términos en días cuentan solo días hábiles desde el día siguiente a la notificación.
-- **Vacancia judicial:** del 20 de diciembre al 10 de enero y de lunes a miércoles de Semana Santa.
+- **Vacancia judicial:** del 20 de diciembre al 10 de enero y de lunes a miércoles de Semana Santa;
+  los términos de tutela sí corren en vacancia.
 - **Notificación personal por mensaje de datos (Ley 2213 de 2022 art. 8):** se entiende surtida pasados dos días
   hábiles desde el envío, con la salvedad de la sentencia C-420 de 2020 (acuse de recibo). Solo aplica a términos que
   empiezan con notificación personal (contestación, excepciones); los autos notificados por estado no la tienen.
@@ -66,6 +67,9 @@ Para usar un modelo real, copia `.env.example` a `.env` (o exporta la variable) 
   derecho de petición: general (15), documentos o información (10), consultas (30).
 
 Cada respuesta incluye la advertencia de que es un cálculo orientativo que debe verificarse en el expediente.
+
+**Fuera del alcance (límites conocidos):** despachos que no salen a vacancia colectiva, notificación por aviso
+(CGP art. 91) y suspensiones o cierres puntuales de un despacho.
 
 ## Configuración de la empresa
 

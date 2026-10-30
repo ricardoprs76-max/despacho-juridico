@@ -3,6 +3,7 @@
 - A term in days counts business days only and starts the day after notification.
 - Judicial terms do not run during the judicial vacancy: 20 December to 10 January,
   and Monday to Wednesday of Holy Week (Thursday and Friday are holidays anyway).
+  Tutela terms are the exception: they keep running during the vacancy.
 - Ley 2213 de 2022, art. 8: a PERSONAL notification sent by data message (e.g. auto
   admisorio, mandamiento de pago) is understood done when two business days have passed
   after sending. Autos and sentencias notified by estado do not get those two days.
@@ -32,6 +33,13 @@ class Termino:
     admite_notif_personal: bool = False
     # Recursos: the 3 days apply to decisions issued outside a hearing (CGP 318, 322).
     fuera_de_audiencia: bool = False
+    # Tutela terms keep running during the judicial vacancy.
+    corre_en_vacancia: bool = False
+
+    @property
+    def cuenta_vacancia(self) -> bool:
+        """Whether the judicial vacancy stops this term."""
+        return self.judicial and not self.corre_en_vacancia
 
 
 CATALOGO: dict[str, Termino] = {
@@ -72,6 +80,7 @@ CATALOGO: dict[str, Termino] = {
             "Impugnación de fallo de tutela",
             3,
             "Decreto 2591 de 1991 art. 31",
+            corre_en_vacancia=True,
         ),
         Termino(
             "respuesta_derecho_peticion",
@@ -155,6 +164,7 @@ _PERSONAL_NOT_APPLICABLE = (
     "personal (por ejemplo, auto admisorio o mandamiento de pago); esta actuación se cuenta "
     "desde su notificación o radicación ordinaria."
 )
+_VACANCY_NOTE = "Los términos de tutela corren durante la vacancia judicial."
 _HEARING_NOTE = (
     "Aplica a providencias dictadas fuera de audiencia; si se dictan en audiencia, "
     "el recurso se interpone en ella."
@@ -186,6 +196,8 @@ class ResultadoPlazo:
         ]
         if t.fuera_de_audiencia:
             parts.append(_HEARING_NOTE)
+        if t.corre_en_vacancia:
+            parts.append(_VACANCY_NOTE)
         if self.electronica_no_aplica:
             parts.append(_PERSONAL_NOT_APPLICABLE)
         return " ".join(parts) + "\n" + DISCLAIMER
@@ -203,13 +215,15 @@ def calcular_plazo(clave: str, notificacion: date, electronica: bool = False) ->
         raise PlazoDesconocido(f"Actuación desconocida: {clave}. Opciones: {options}.")
     aplica = electronica and termino.admite_notif_personal
     efectiva = (
-        fecha_notificacion_efectiva(notificacion, termino.judicial) if aplica else notificacion
+        fecha_notificacion_efectiva(notificacion, termino.cuenta_vacancia)
+        if aplica
+        else notificacion
     )
     return ResultadoPlazo(
         termino=termino,
         notificacion=notificacion,
-        inicio=siguiente_dia_habil(efectiva, termino.judicial),
-        vencimiento=sumar_dias_habiles(efectiva, termino.dias, termino.judicial),
+        inicio=siguiente_dia_habil(efectiva, termino.cuenta_vacancia),
+        vencimiento=sumar_dias_habiles(efectiva, termino.dias, termino.cuenta_vacancia),
         electronica=aplica,
         efectiva=efectiva,
         electronica_no_aplica=electronica and not aplica,

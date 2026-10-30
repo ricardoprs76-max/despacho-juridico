@@ -2,6 +2,7 @@
 
 import io
 import json
+import os
 import sqlite3
 import sys
 from collections.abc import Callable
@@ -26,6 +27,9 @@ DEFAULT_DATA = Path(".agentes")
 MEMORY_FILE = "memoria.sqlite"
 YES = {"s", "si", "sí"}
 NO = {"n", "no"}
+API_KEY_VAR = "AGENTES_API_KEY"
+LOCAL_HOSTS = {"127.0.0.1", "localhost"}
+PUBLIC_WITHOUT_KEY = "Sin AGENTES_API_KEY solo se permite --host 127.0.0.1 o localhost."
 STATUS_ES: dict[AuditStatus, str] = {
     "executed": "ejecutada",
     "rejected": "cancelada",
@@ -142,6 +146,36 @@ def chat(
         except (_EndOfInput, KeyboardInterrupt):
             typer.echo()
     typer.echo(GOODBYE)
+
+
+@app.command()
+def serve(
+    config: ConfigArg,
+    host: Annotated[str, typer.Option(help="Dirección en la que escucha el servidor.")] = (
+        "127.0.0.1"
+    ),
+    port: Annotated[int, typer.Option(help="Puerto del servidor.")] = 8000,
+    data: DataOpt = None,
+) -> None:
+    """Sirve el agente por HTTP (API y chat web). La clave se lee de AGENTES_API_KEY."""
+    import uvicorn
+
+    from agentes.api import create_app
+
+    _force_utf8()
+    cfg = _load_or_exit(config)
+    api_key = os.environ.get(API_KEY_VAR, "").strip() or None
+    if api_key is None and host not in LOCAL_HOSTS:
+        typer.echo(PUBLIC_WITHOUT_KEY, err=True)
+        raise typer.Exit(code=2)
+    data_dir, db_path = _paths(data, None)
+    with Agent(cfg, build_chat_model(cfg.model), db_path=db_path, data_dir=data_dir) as agent:
+        if agent.is_demo:
+            typer.echo(DEMO_NOTICE)
+        for warning in agent.warnings:
+            typer.echo(f"Aviso: {warning}")
+        typer.echo(f"Abre http://{host}:{port} en el navegador.")
+        uvicorn.run(create_app(agent, api_key), host=host, port=port)
 
 
 @app.command()

@@ -6,7 +6,7 @@ import uuid
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi import Path as PathParam
 from fastapi.security import APIKeyHeader
 from langchain_core.messages import AIMessage, HumanMessage
@@ -14,6 +14,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from agentes.agent import Agent, AgentError, AgentReply, PendingAction
 from agentes.api.schemas import (
     THREAD_PATTERN,
+    AuditEntryOut,
     ChatRequest,
     ChatResponse,
     ConfirmRequest,
@@ -26,6 +27,8 @@ from agentes.api.schemas import (
 API_KEY_HEADER = "X-API-Key"
 BAD_KEY = "Clave de API inválida o ausente."
 MODEL_FAILED = "No se pudo obtener respuesta del modelo: {error}"
+DEFAULT_AUDIT = 50
+MAX_AUDIT = 500
 
 ThreadPath = Annotated[str, PathParam(pattern=THREAD_PATTERN)]
 
@@ -104,6 +107,16 @@ def create_app(agent: Agent, api_key: str | None = None) -> FastAPI:
         return HistoryResponse(
             thread_id=thread_id, messages=messages, pending=_pending_out(pending)
         )
+
+    @protected.get("/audit", tags=["audit"])
+    def audit(
+        thread_id: Annotated[str | None, Query(pattern=THREAD_PATTERN)] = None,
+        limit: Annotated[int, Query(ge=1, le=MAX_AUDIT)] = DEFAULT_AUDIT,
+    ) -> list[AuditEntryOut]:
+        """Tool calls the agent executed, cancelled or failed; newest first."""
+        with lock:
+            entries = agent.audit.entries(thread_id=thread_id, limit=limit)
+        return [AuditEntryOut.model_validate(e, from_attributes=True) for e in entries]
 
     app.include_router(protected)
     return app

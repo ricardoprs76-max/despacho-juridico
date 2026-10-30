@@ -6,17 +6,28 @@ from typing import Any
 
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolCall,
+    ToolMessage,
+)
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import Runnable
 from langchain_core.tools import BaseTool
+from langchain_core.utils.function_calling import convert_to_openai_tool
 
 DEMO_PREFIX = "[modo demo] "
-GREETING_WORDS = ("hola", "buenos días", "buenas tardes", "buenas noches", "buenas")
 GENERIC_ANSWER = (
     "En modo demo no puedo consultar información real. Configura una clave de IA "
     "(por ejemplo GOOGLE_API_KEY, que es gratis) para obtener respuestas de verdad."
 )
+_GREETING_RE = re.compile(r"\b(hola|buenos días|buenas tardes|buenas noches|buenas)\b")
+_SEARCH_RE = re.compile(r"\b(horario|precio|pol[ií]tica|garant[ií]a|documento)")
+_SHEET_RE = re.compile(r"\b(registra|anota)")
+_EMAIL_RE = re.compile(r"\b(correo|email)")
 _COMPANY_RE = re.compile(r"asistente virtual de (.+?), una empresa")
 
 
@@ -36,8 +47,16 @@ def _last_human_text(messages: Sequence[BaseMessage]) -> str:
     return ""
 
 
+def _tool_name(tool: dict[str, Any] | type | Callable[..., Any] | BaseTool) -> str:
+    if isinstance(tool, BaseTool):
+        return tool.name
+    return str(convert_to_openai_tool(tool)["function"]["name"])
+
+
 class DemoChatModel(BaseChatModel):
-    """Answers with canned Spanish replies chosen by keyword."""
+    """Answers with canned Spanish replies and calls bound tools by keyword."""
+
+    tool_names: frozenset[str] = frozenset()
 
     @property
     def _llm_type(self) -> str:
@@ -50,13 +69,39 @@ class DemoChatModel(BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
-        text = _last_human_text(messages).lower()
-        if any(word in text for word in GREETING_WORDS):
+        return ChatResult(generations=[ChatGeneration(message=self._reply(messages))])
+
+    def _reply(self, messages: list[BaseMessage]) -> AIMessage:
+        last = messages[-1] if messages else None
+        if isinstance(last, ToolMessage):
+            return AIMessage(content=f"{DEMO_PREFIX}Resultado: {last.text}")
+
+        original = _last_human_text(messages)
+        text = original.lower()
+        call = self._tool_call_for(text, original, call_id=f"demo-{len(messages)}")
+        if call is not None:
+            return AIMessage(content="", tool_calls=[call])
+        if _GREETING_RE.search(text):
             answer = f"¡Hola! Soy el asistente de {_company_from(messages)}. ¿En qué te ayudo?"
         else:
             answer = GENERIC_ANSWER
-        message = AIMessage(content=DEMO_PREFIX + answer)
-        return ChatResult(generations=[ChatGeneration(message=message)])
+        return AIMessage(content=DEMO_PREFIX + answer)
+
+    def _tool_call_for(self, text: str, original: str, call_id: str) -> ToolCall | None:
+        if "buscar_documentos" in self.tool_names and _SEARCH_RE.search(text):
+            return ToolCall(name="buscar_documentos", args={"consulta": original}, id=call_id)
+        if "registrar_en_hoja" in self.tool_names and _SHEET_RE.search(text):
+            return ToolCall(
+                name="registrar_en_hoja", args={"datos": {"nota": original}}, id=call_id
+            )
+        if "enviar_correo" in self.tool_names and _EMAIL_RE.search(text):
+            args = {
+                "para": "cliente@ejemplo.com",
+                "asunto": "Mensaje de prueba",
+                "cuerpo": original,
+            }
+            return ToolCall(name="enviar_correo", args=args, id=call_id)
+        return None
 
     def bind_tools(
         self,
@@ -65,5 +110,5 @@ class DemoChatModel(BaseChatModel):
         tool_choice: str | None = None,
         **kwargs: Any,
     ) -> Runnable[LanguageModelInput, AIMessage]:
-        """The demo model never calls tools, so binding is a no-op."""
-        return self
+        """Return a copy that knows which tools it may call."""
+        return self.model_copy(update={"tool_names": frozenset(_tool_name(t) for t in tools)})

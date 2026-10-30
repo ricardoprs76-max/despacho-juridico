@@ -19,7 +19,7 @@ EXAMPLE_CONFIG = Path(__file__).resolve().parents[1] / "configs" / "ejemplo.yaml
 class RecordingChatModel(BaseChatModel):
     """Replies with scripted answers in order and records every input it receives."""
 
-    replies: list[str]
+    replies: list[str | AIMessage]
     calls: list[list[BaseMessage]] = Field(default_factory=list)
 
     @property
@@ -35,7 +35,11 @@ class RecordingChatModel(BaseChatModel):
     ) -> ChatResult:
         self.calls.append(list(messages))
         answer = self.replies[len(self.calls) - 1]
-        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=answer))])
+        message = answer if isinstance(answer, AIMessage) else AIMessage(content=answer)
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+    def bind_tools(self, tools: Any, **kwargs: Any) -> "RecordingChatModel":
+        return self
 
 
 @pytest.fixture

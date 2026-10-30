@@ -1,5 +1,6 @@
 """Where 'enviar_correo' sends: an outbox folder by default, SMTP if configured."""
 
+import itertools
 import os
 import re
 import smtplib
@@ -40,9 +41,17 @@ class OutboxMailer:
         self.folder.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
         slug = _SLUG_RE.sub("-", subject.lower()).strip("-")[:40] or "correo"
-        path = self.folder / f"{stamp}-{slug}.eml"
-        path.write_bytes(message.as_bytes())
-        return f"Correo guardado en la bandeja de salida: {path.name}"
+        # Exclusive create: two emails in the same clock tick must never overwrite each other.
+        for attempt in itertools.count():
+            suffix = f"-{attempt}" if attempt else ""
+            path = self.folder / f"{stamp}-{slug}{suffix}.eml"
+            try:
+                with path.open("xb") as fh:
+                    fh.write(message.as_bytes())
+            except FileExistsError:
+                continue
+            return f"Correo guardado en la bandeja de salida: {path.name}"
+        raise AssertionError("unreachable")
 
 
 class SmtpMailer:

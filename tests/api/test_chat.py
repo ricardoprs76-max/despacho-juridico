@@ -23,6 +23,11 @@ def test_health_reports_company_and_mode(make_client: MakeClient) -> None:
         "provider": "test",
         "model": "recording",
         "auth": False,
+        "tools": [
+            {"name": "buscar_documentos", "confirm": False},
+            {"name": "registrar_en_hoja", "confirm": True},
+            {"name": "enviar_correo", "confirm": True},
+        ],
     }
 
 

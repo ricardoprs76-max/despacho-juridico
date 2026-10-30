@@ -48,6 +48,11 @@ class HistoryResponse(BaseModel):
     pending: PendingOut | None
 
 
+class ToolOut(BaseModel):
+    name: str
+    confirm: bool = Field(description="true si la herramienta espera un sí antes de ejecutarse.")
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     company: str
@@ -56,6 +61,7 @@ class HealthResponse(BaseModel):
     provider: str
     model: str
     auth: bool
+    tools: list[ToolOut]
 
 
 class AuditEntryOut(BaseModel):

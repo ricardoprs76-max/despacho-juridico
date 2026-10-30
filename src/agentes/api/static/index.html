@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agente de la empresa</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="side" aria-label="Empresa">
+    <div class="brand">
+      <span class="mark" id="mark" aria-hidden="true">··</span>
+      <div class="brand-text">
+        <p class="company" id="company">Cargando…</p>
+        <p class="sector" id="sector"></p>
+      </div>
+    </div>
+    <p class="mode" id="mode"></p>
+
+    <button type="button" class="btn-secondary wide" id="new-thread">Nueva conversación</button>
+
+    <section class="side-block" aria-labelledby="tools-title">
+      <h2 id="tools-title">Lo que puede hacer</h2>
+      <ul class="tools" id="tools"></ul>
+      <p class="note">Las acciones marcadas esperan tu aprobación antes de ejecutarse.</p>
+    </section>
+
+    <form class="side-block key" id="key-form" hidden>
+      <h2><label for="key-input">Clave de acceso</label></h2>
+      <input type="password" id="key-input" autocomplete="off" placeholder="X-API-Key">
+      <button type="submit" class="btn-secondary wide">Guardar clave</button>
+      <p class="note">Se guarda solo en esta pestaña.</p>
+    </form>
+
+    <a class="docs" href="docs">Documentación de la API</a>
+  </aside>
+
+  <header class="top">
+    <h1>Conversación</h1>
+    <p class="thread" id="thread-label">Nueva</p>
+  </header>
+
+  <main class="sheet">
+    <section class="chat" aria-labelledby="chat-title">
+      <h2 class="visually-hidden" id="chat-title">Mensajes</h2>
+      <ol class="messages" id="messages" aria-live="polite"></ol>
+      <p class="empty" id="empty">Escribe tu primera pregunta. Por ejemplo: ¿cuál es el horario de atención?</p>
+      <p class="status" id="status" role="status"></p>
+      <form class="composer" id="composer">
+        <label class="visually-hidden" for="message">Mensaje</label>
+        <textarea id="message" rows="2" maxlength="4000" placeholder="Escribe un mensaje. Enter envía, Mayús+Enter salta de línea."></textarea>
+        <button type="submit" class="btn-primary" id="send">Enviar</button>
+      </form>
+    </section>
+
+    <section class="audit" aria-labelledby="audit-title">
+      <h2 id="audit-title">Acciones registradas</h2>
+      <p class="note">Cada herramienta que usa el agente queda anotada aquí.</p>
+      <ol class="ledger" id="ledger"></ol>
+      <p class="empty small" id="ledger-empty">Aún no hay acciones en esta conversación.</p>
+    </section>
+  </main>
+
+  <template id="pending-template">
+    <li class="pending">
+      <h3>Pendiente de tu aprobación</h3>
+      <dl class="draft"></dl>
+      <div class="pending-actions">
+        <button type="button" class="btn-primary" data-approve="true">Confirmar</button>
+        <button type="button" class="btn-secondary" data-approve="false">Cancelar</button>
+      </div>
+    </li>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

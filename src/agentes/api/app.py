@@ -4,11 +4,13 @@ import secrets
 import threading
 import uuid
 from collections.abc import Callable
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi import Path as PathParam
 from fastapi.security import APIKeyHeader
+from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import AIMessage, HumanMessage
 
 from agentes.agent import Agent, AgentError, AgentReply, PendingAction
@@ -22,11 +24,13 @@ from agentes.api.schemas import (
     HistoryResponse,
     MessageOut,
     PendingOut,
+    ToolOut,
 )
 
 API_KEY_HEADER = "X-API-Key"
 BAD_KEY = "Clave de API inválida o ausente."
 MODEL_FAILED = "No se pudo obtener respuesta del modelo: {error}"
+STATIC_DIR = Path(__file__).parent / "static"
 DEFAULT_AUDIT = 50
 MAX_AUDIT = 500
 
@@ -80,6 +84,10 @@ def create_app(agent: Agent, api_key: str | None = None) -> FastAPI:
             provider=agent.selection.provider,
             model=agent.selection.model_name,
             auth=api_key is not None,
+            tools=[
+                ToolOut(name=name, confirm=name in agent.config.confirm_tools)
+                for name in agent.config.tools
+            ],
         )
 
     protected = APIRouter(dependencies=[Depends(require_key)], tags=["chat"])
@@ -119,4 +127,6 @@ def create_app(agent: Agent, api_key: str | None = None) -> FastAPI:
         return [AuditEntryOut.model_validate(e, from_attributes=True) for e in entries]
 
     app.include_router(protected)
+    # Mounted last so every API route above wins over a file of the same name.
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="web")
     return app

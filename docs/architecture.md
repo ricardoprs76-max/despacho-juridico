@@ -3,29 +3,58 @@
 ```mermaid
 flowchart LR
     YAML[configs/*.yaml] -->|load_config| CFG[AgentConfig]
-    CFG -->|model| FAC[build_chat_model]
-    ENV[(API key env vars)] --> FAC
+    CFG --> FAC[build_chat_model]
+    ENV[(env vars / .env)] --> FAC
     FAC -->|key present| REAL[Gemini / Claude / OpenAI]
     FAC -->|no key| DEMO[DemoChatModel]
-    CFG -->|system_prompt| GRAPH[LangGraph: START → model → END]
-    REAL --> GRAPH
-    DEMO --> GRAPH
-    GRAPH <-->|checkpoints per thread_id| DB[(SQLite)]
-    GRAPH --> AGENT[Agent.ask / history]
-    AGENT --> CLI[agentes chat / validate]
+    CFG --> CTX[build_context]
+    DOCS[(knowledge_dir)] --> CTX
+    ENV --> CTX
+    CTX --> TOOLS[buscar_documentos · registrar_en_hoja · enviar_correo]
+
+    subgraph Graph[LangGraph]
+        direction LR
+        START((start)) --> M[model]
+        M -->|tool calls| T[tools]
+        T -->|confirm_tools| I{{interrupt: ¿Confirmas?}}
+        I -->|resume yes/no| T
+        T --> M
+        M -->|answer| END((end))
+    end
+
+    REAL --> M
+    DEMO --> M
+    TOOLS --> T
+    T --> AUD[(audit_log)]
+    Graph <-->|checkpoints per thread_id| DB[(SQLite)]
+    Graph --> AGENT[Agent.ask / confirm / pending]
+    AGENT --> CLI[agentes chat / auditoria / validate]
 ```
 
 | Module | Responsibility |
 |--------|----------------|
 | `agentes.config` | Pydantic schema for a company, YAML loading with one-line Spanish errors. |
-| `agentes.llm` | Chooses the chat model; falls back to a deterministic offline demo model. |
-| `agentes.graph` | Builds the LangGraph state graph. The system prompt is injected per call, never stored, so config edits apply to existing conversations. |
-| `agentes.agent` | Facade owning the SQLite checkpointer; one `thread_id` per conversation. |
-| `agentes.cli` | Typer commands; forces UTF-8 output for Windows consoles. |
+| `agentes.llm` | Chooses the chat model; falls back to a deterministic offline demo model that can also call tools. |
+| `agentes.rag` | Loads `.md`/`.txt`/`.pdf` into chunks; BM25+ search offline, embeddings with a key; formats cited passages. |
+| `agentes.integrations` | Sheet (CSV / Google Sheets) and email (outbox / SMTP) backends. |
+| `agentes.tools` | Builds only the tools a config enables, wired to their backends. |
+| `agentes.audit` | Append-only SQLite log of every tool call and its outcome. |
+| `agentes.graph` | The LangGraph state graph: model node, tools node with confirmation interrupts. |
+| `agentes.agent` | Facade: `ask`, `confirm`, `pending`, `history`; owns the SQLite connections. |
+| `agentes.cli` | Typer commands; forces UTF-8 for Windows consoles. |
 
 Design decisions:
 
-- **Graph over a plain chain** — Phase 2 adds a `tools` node and a human-confirmation
-  interrupt to the same graph; node names are stable for that reason.
-- **Demo model instead of failing without a key** — the project must be runnable by anyone
-  who clones it, and tests must never depend on the network.
+- **Graph over a plain chain** — tool use and human confirmation are just more nodes and an
+  `interrupt`, and the checkpointer gives persistence for free.
+- **All confirmations before any execution** — LangGraph re-runs an interrupted node from the
+  top when it resumes. The tools node asks for every confirmation first and only then executes,
+  so resuming can never repeat an email or a sheet row.
+- **Arguments validated before asking** — the user is never asked to approve a call that would
+  fail on its own arguments.
+- **BM25+ offline fallback** — RAG must work without any key; BM25+ keeps scores positive for
+  tiny corpora (a company with one document) and Spanish stopwords are dropped.
+- **Separate SQLite connection for the audit log** — the checkpointer commits from LangGraph's
+  worker threads; sharing its connection raced.
+- **Demo model instead of failing without a key** — the project must be runnable by anyone who
+  clones it, and tests must never depend on the network.

@@ -22,7 +22,7 @@ TOOLS_NODE = "tools"
 CANCELLED = "El usuario canceló la acción."
 
 
-def _invalid_args(tool: BaseTool, args: dict[str, Any]) -> str | None:
+def invalid_args(tool: BaseTool, args: dict[str, Any]) -> str | None:
     """Spanish description of why args don't fit the tool's schema, or None if they do."""
     schema = tool.args_schema
     if not (isinstance(schema, type) and issubclass(schema, BaseModel)):
@@ -56,7 +56,7 @@ def build_graph(
         tool = by_name.get(call["name"])
         if tool is None:
             return f"La herramienta {call['name']} no está disponible."
-        return _invalid_args(tool, call["args"])
+        return invalid_args(tool, call["args"])
 
     def execute(call: ToolCall, problem: str | None, approved: bool) -> tuple[AuditStatus, str]:
         if problem is not None:

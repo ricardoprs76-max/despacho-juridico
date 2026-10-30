@@ -16,14 +16,16 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import BaseTool
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.types import Command
 
-from agentes.audit import AuditLog
+from agentes.audit import AuditLog, AuditStatus
 from agentes.config import AgentConfig
 from agentes.graph import build_graph
+from agentes.graph.builder import invalid_args
 from agentes.llm import ModelSelection
-from agentes.tools import build_context, build_tools, fields_to_row
+from agentes.tools import SIDE_EFFECT_TOOLS, build_context, build_tools, fields_to_row
 
 
 class AgentError(Exception):
@@ -89,11 +91,12 @@ class Agent:
             context = build_context(config, data_dir or db_path.parent, env)
             self.warnings = context.warnings
             self.audit = AuditLog(self._audit_conn)
+            self.tools: tuple[BaseTool, ...] = tuple(build_tools(config, context))
             self._graph = build_graph(
                 config,
                 selection.model,
                 SqliteSaver(self._conn),
-                tools=build_tools(config, context),
+                tools=self.tools,
                 audit=self.audit,
             )
         except Exception:
@@ -132,6 +135,30 @@ class Agent:
         except Exception as exc:
             raise AgentError(str(exc)) from exc
         return self._reply(thread_id)
+
+    def run_tool(self, name: str, args: dict[str, Any], thread_id: str = "mcp") -> str:
+        """Run one enabled read-only tool directly (no model) and record it in the audit log.
+
+        Side-effecting tools are refused: they only run through ask/confirm, after a yes.
+        """
+        tool = next((t for t in self.tools if t.name == name), None)
+        if tool is None:
+            raise ValueError(f"La herramienta {name} no está disponible.")
+        if name in SIDE_EFFECT_TOOLS:
+            raise ValueError(
+                f"{name} tiene efectos; pídela a través de preguntar para confirmarla."
+            )
+        status: AuditStatus
+        problem = invalid_args(tool, args)
+        if problem is not None:
+            status, text = "error", problem
+        else:
+            try:
+                status, text = "executed", str(tool.invoke(args))
+            except Exception as exc:
+                status, text = "error", f"Error al ejecutar {name}: {exc}"
+        self.audit.record(thread_id, name, args, status, text)
+        return text
 
     def pending(self, thread_id: str) -> PendingAction | None:
         """The action waiting for confirmation, read from the checkpoint (survives restarts)."""

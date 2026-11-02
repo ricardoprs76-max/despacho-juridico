@@ -1,0 +1,154 @@
+{
+  "name": "WhatsApp a agente",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["messages"]
+      },
+      "id": "7d2e1a40-5c3b-4f8e-a1b2-3c4d5e6f7a01",
+      "name": "Mensaje de WhatsApp",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "0c6a9e1f-8b4d-4e27-9f3a-6d5c4b3a2e10",
+      "credentials": {
+        "whatsAppTriggerApi": { "name": "WhatsApp Business (trigger)" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a3b4c5d6-7e8f-4a1b-9c2d-3e4f5a6b7c01",
+              "leftValue": "={{ $json.messages?.[0]?.text?.body }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "7d2e1a40-5c3b-4f8e-a1b2-3c4d5e6f7a02",
+      "name": "Solo mensajes de texto",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "resource": "conversation",
+        "operation": "sendMessage",
+        "message": "={{ $json.messages[0].text.body }}",
+        "threadId": "={{ ('wa-' + $json.messages[0].from).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 64) }}"
+      },
+      "id": "7d2e1a40-5c3b-4f8e-a1b2-3c4d5e6f7a03",
+      "name": "Preguntar al agente",
+      "type": "CUSTOM.agentesIa",
+      "typeVersion": 1,
+      "position": [440, 0],
+      "credentials": {
+        "agentesIaApi": { "name": "Agentes IA API" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a3b4c5d6-7e8f-4a1b-9c2d-3e4f5a6b7c02",
+              "leftValue": "={{ $json.pending }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "7d2e1a40-5c3b-4f8e-a1b2-3c4d5e6f7a04",
+      "name": "¿Acción pendiente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{ $('Mensaje de WhatsApp').item.json.metadata.phone_number_id }}",
+        "recipientPhoneNumber": "={{ $('Mensaje de WhatsApp').item.json.messages[0].from }}",
+        "textBody": "Tu solicitud quedó pendiente de aprobación. Te escribiremos cuando una persona del equipo la revise.",
+        "additionalFields": {}
+      },
+      "id": "7d2e1a40-5c3b-4f8e-a1b2-3c4d5e6f7a05",
+      "name": "Avisar pendiente",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [880, -120],
+      "credentials": {
+        "whatsAppApi": { "name": "WhatsApp Business" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{ $('Mensaje de WhatsApp').item.json.metadata.phone_number_id }}",
+        "recipientPhoneNumber": "={{ $('Mensaje de WhatsApp').item.json.messages[0].from }}",
+        "textBody": "={{ $json.reply }}",
+        "additionalFields": {}
+      },
+      "id": "7d2e1a40-5c3b-4f8e-a1b2-3c4d5e6f7a06",
+      "name": "Enviar respuesta",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [880, 120],
+      "credentials": {
+        "whatsAppApi": { "name": "WhatsApp Business" }
+      }
+    }
+  ],
+  "connections": {
+    "Mensaje de WhatsApp": {
+      "main": [[{ "node": "Solo mensajes de texto", "type": "main", "index": 0 }]]
+    },
+    "Solo mensajes de texto": {
+      "main": [[{ "node": "Preguntar al agente", "type": "main", "index": 0 }]]
+    },
+    "Preguntar al agente": {
+      "main": [[{ "node": "¿Acción pendiente?", "type": "main", "index": 0 }]]
+    },
+    "¿Acción pendiente?": {
+      "main": [
+        [{ "node": "Avisar pendiente", "type": "main", "index": 0 }],
+        [{ "node": "Enviar respuesta", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "timezone": "America/Bogota" },
+  "active": false,
+  "tags": []
+}

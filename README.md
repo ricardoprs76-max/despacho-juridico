@@ -159,6 +159,29 @@ like any other call. Side-effecting tools are never exposed directly: they only 
 }
 ```
 
+## n8n
+
+The agent plugs into [n8n](https://n8n.io) without being rebuilt there: n8n moves messages
+in and out, the agent keeps its rules, tools, confirmation step and audit log.
+
+- **Custom node** [`integrations/n8n/node`](integrations/n8n/node) (TypeScript, built with
+  n8n's official node CLI, lint in strict mode): *Send Message*, *Confirm*, *Get History* and
+  *Audit → Get Many*. A pending action comes back in `pending` instead of running. Usable as a
+  tool by n8n's own AI agents. Install it in a self-hosted n8n with
+  `N8N_CUSTOM_EXTENSIONS=/path/to/integrations/n8n/node` after `npm ci && npm run build`.
+- **Flow templates** [`integrations/n8n/flows`](integrations/n8n/flows): email → agent →
+  Google Sheets log + reply; WhatsApp → agent → reply; an approval link
+  (`/webhook/aprobar?conversacion=…&aprobar=si`, behind Basic Auth) that confirms the pending
+  action. A flow never claims an action happened while it is waiting for approval.
+- **docker-compose** runs both, with n8n's node preinstalled:
+
+```bash
+echo "AGENTES_API_KEY=pick-a-long-random-key" > .env   # compose refuses to start without it
+docker compose up --build
+# agent + web chat: http://localhost:8000   n8n: http://localhost:5678
+# in n8n, the "Agentes IA API" credential uses base URL http://agente:8000
+```
+
 ## Company config
 
 | Field | Required | Description |
@@ -194,7 +217,7 @@ Architecture overview: [docs/architecture.md](docs/architecture.md).
 - [x] **Phase 2 — Tools & safety:** RAG over company documents with citations, Sheets and email tools, human-in-the-loop confirmation, audit log.
 - [x] **Phase 3 — Sector examples:** law firm (Colombian legal deadlines), shop, clinic.
 - [x] **Phase 4a — API & demo:** FastAPI service with API-key auth, Spanish web chat, MCP server.
-- [ ] **Phase 4b — n8n:** flow templates, a custom TypeScript n8n node, docker-compose.
+- [x] **Phase 4b — n8n:** flow templates, a custom TypeScript n8n node, docker-compose.
 - [ ] **Phase 5 — Presentation:** Docker, demo GIF, final polish.
 
 ## License

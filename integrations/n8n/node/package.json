@@ -1,0 +1,54 @@
+{
+  "name": "n8n-nodes-agentes-ia",
+  "version": "0.1.0",
+  "description": "n8n node for Agentes IA para Empresas: chat with a company agent, confirm its actions, read its audit log.",
+  "license": "MIT",
+  "homepage": "https://github.com/ricardoprs76/agentes-ia-empresas/tree/main/integrations/n8n/node",
+  "keywords": [
+    "n8n-community-node-package",
+    "ai-agent",
+    "langgraph"
+  ],
+  "author": {
+    "name": "Ricardo Porras",
+    "email": "ricardoprs76@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ricardoprs76/agentes-ia-empresas.git",
+    "directory": "integrations/n8n/node"
+  },
+  "scripts": {
+    "build": "n8n-node build",
+    "build:watch": "tsc --watch",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "release": "n8n-node release",
+    "prepublishOnly": "n8n-node prerelease",
+    "test": "n8n-node build && node --test \"test/**/*.test.mjs\""
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": [
+      "dist/credentials/AgentesIaApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/AgentesIa/AgentesIa.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@n8n/node-cli": "0.54.6",
+    "eslint": "9.32.0",
+    "prettier": "3.6.2",
+    "release-it": "^21.1.0",
+    "typescript": "5.9.2"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

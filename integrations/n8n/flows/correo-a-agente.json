@@ -1,0 +1,180 @@
+{
+  "name": "Correo a agente",
+  "nodes": [
+    {
+      "parameters": {
+        "postProcessAction": "read",
+        "options": {}
+      },
+      "id": "5b0f6c1e-2d3a-4c1b-9a51-0c8f4a1d7e01",
+      "name": "Correo recibido",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "credentials": {
+        "imap": { "name": "Buzón de la empresa (IMAP)" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "conversation",
+        "operation": "sendMessage",
+        "message": "={{ 'Asunto: ' + ($json.subject || '(sin asunto)') + '\\n\\n' + ($json.textPlain || $json.textHtml || '') }}",
+        "threadId": "={{ ('correo-' + ((($json.from || '').match(/<([^>]+)>/) || [])[1] || $json.from || 'desconocido')).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 64) }}"
+      },
+      "id": "5b0f6c1e-2d3a-4c1b-9a51-0c8f4a1d7e02",
+      "name": "Preguntar al agente",
+      "type": "CUSTOM.agentesIa",
+      "typeVersion": 1,
+      "position": [240, 0],
+      "credentials": {
+        "agentesIaApi": { "name": "Agentes IA API" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1a4e0f2-6b7d-4e11-8f3a-2b9c5d6e7f01",
+              "leftValue": "={{ $json.pending }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "5b0f6c1e-2d3a-4c1b-9a51-0c8f4a1d7e03",
+      "name": "¿Acción pendiente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "url", "value": "" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Correos" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $now.toISO() }}",
+            "Remitente": "={{ $('Correo recibido').item.json.from }}",
+            "Asunto": "={{ $('Correo recibido').item.json.subject }}",
+            "Estado": "Pendiente de aprobación",
+            "Detalle": "={{ $json.pending.description }}",
+            "Conversación": "={{ $json.thread_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Fecha", "displayName": "Fecha", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Remitente", "displayName": "Remitente", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Asunto", "displayName": "Asunto", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Estado", "displayName": "Estado", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Detalle", "displayName": "Detalle", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Conversación", "displayName": "Conversación", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b0f6c1e-2d3a-4c1b-9a51-0c8f4a1d7e04",
+      "name": "Registrar pendiente",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, -120],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "__rl": true, "mode": "url", "value": "" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "Correos" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $now.toISO() }}",
+            "Remitente": "={{ $('Correo recibido').item.json.from }}",
+            "Asunto": "={{ $('Correo recibido').item.json.subject }}",
+            "Estado": "Respondido",
+            "Detalle": "={{ $json.reply }}",
+            "Conversación": "={{ $json.thread_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Fecha", "displayName": "Fecha", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Remitente", "displayName": "Remitente", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Asunto", "displayName": "Asunto", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Estado", "displayName": "Estado", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Detalle", "displayName": "Detalle", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true },
+            { "id": "Conversación", "displayName": "Conversación", "type": "string", "required": false, "display": true, "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b0f6c1e-2d3a-4c1b-9a51-0c8f4a1d7e05",
+      "name": "Registrar respuesta",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 120],
+      "credentials": {
+        "googleSheetsOAuth2Api": { "name": "Google Sheets" }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "",
+        "toEmail": "={{ $('Correo recibido').item.json.from }}",
+        "subject": "={{ 'Re: ' + ($('Correo recibido').item.json.subject || '') }}",
+        "emailFormat": "text",
+        "text": "={{ $('Preguntar al agente').item.json.reply }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "5b0f6c1e-2d3a-4c1b-9a51-0c8f4a1d7e06",
+      "name": "Responder al remitente",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [960, 120],
+      "credentials": {
+        "smtp": { "name": "Correo de la empresa (SMTP)" }
+      }
+    }
+  ],
+  "connections": {
+    "Correo recibido": {
+      "main": [[{ "node": "Preguntar al agente", "type": "main", "index": 0 }]]
+    },
+    "Preguntar al agente": {
+      "main": [[{ "node": "¿Acción pendiente?", "type": "main", "index": 0 }]]
+    },
+    "¿Acción pendiente?": {
+      "main": [
+        [{ "node": "Registrar pendiente", "type": "main", "index": 0 }],
+        [{ "node": "Registrar respuesta", "type": "main", "index": 0 }]
+      ]
+    },
+    "Registrar respuesta": {
+      "main": [[{ "node": "Responder al remitente", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "timezone": "America/Bogota" },
+  "active": false,
+  "tags": []
+}

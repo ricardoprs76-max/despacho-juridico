@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+.env
+.agentes
+.superpowers
+**/__pycache__
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.coverage
+*.sqlite
+dist
+docs
+tests
+integrations/n8n/node/node_modules
+integrations/n8n/node/dist

@@ -1,0 +1,36 @@
+# Agent API + n8n with the Agentes IA node. Usage:
+#   echo AGENTES_API_KEY=pick-a-long-random-key > .env
+#   docker compose up --build
+# Agent: http://localhost:8000 (web chat)   n8n: http://localhost:5678
+# Inside n8n, the "Agentes IA API" credential uses base URL http://agente:8000.
+services:
+  agente:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      AGENTES_API_KEY: ${AGENTES_API_KEY:?Define AGENTES_API_KEY en .env}
+      # Optional: without it the agent runs in demo mode (no external model).
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+    volumes:
+      - agente-datos:/data
+    restart: unless-stopped
+
+  n8n:
+    build: integrations/n8n
+    ports:
+      - "5678:5678"
+    environment:
+      GENERIC_TIMEZONE: America/Bogota
+      TZ: America/Bogota
+      N8N_SECURE_COOKIE: "false"
+    volumes:
+      - n8n-datos:/home/node/.n8n
+    depends_on:
+      agente:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  agente-datos:
+  n8n-datos:

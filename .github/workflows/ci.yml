@@ -37,3 +37,29 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: compose refuses to start without AGENTES_API_KEY
+        run: |
+          if AGENTES_API_KEY= docker compose config > /dev/null 2> err.txt; then
+            echo "compose accepted an empty AGENTES_API_KEY"; exit 1
+          fi
+          grep AGENTES_API_KEY err.txt
+      - name: compose is valid with a key
+        run: docker compose config > /dev/null
+        env:
+          AGENTES_API_KEY: ci-key
+      - name: build both images
+        run: docker compose build
+        env:
+          AGENTES_API_KEY: ci-key
+      - name: agent container becomes healthy
+        env:
+          AGENTES_API_KEY: ci-key
+        run: |
+          docker compose up -d --wait agente
+          curl -fsS -H "X-API-Key: ci-key" http://localhost:8000/health
+          docker compose down

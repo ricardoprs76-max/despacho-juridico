@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "n8n node for Agentes IA para Empresas: chat with a company agent, confirm its actions, read its audit log.",
   "license": "MIT",
-  "homepage": "https://github.com/ricardoprs76-max/agentes-ia-empresas/tree/main/integrations/n8n/node",
+  "homepage": "https://github.com/ricardoprs76-max/despacho-juridico/tree/main/integrations/n8n/node",
   "keywords": [
     "n8n-community-node-package",
     "ai-agent",
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ricardoprs76-max/agentes-ia-empresas.git",
+    "url": "https://github.com/ricardoprs76-max/despacho-juridico.git",
     "directory": "integrations/n8n/node"
   },
   "scripts": {

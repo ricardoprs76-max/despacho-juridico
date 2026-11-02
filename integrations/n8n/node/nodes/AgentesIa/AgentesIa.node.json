@@ -6,12 +6,12 @@
 	"resources": {
 		"credentialDocumentation": [
 			{
-				"url": "https://github.com/ricardoprs76-max/agentes-ia-empresas/tree/main/integrations/n8n/node#credentials"
+				"url": "https://github.com/ricardoprs76-max/despacho-juridico/tree/main/integrations/n8n/node#credentials"
 			}
 		],
 		"primaryDocumentation": [
 			{
-				"url": "https://github.com/ricardoprs76-max/agentes-ia-empresas/tree/main/integrations/n8n/node"
+				"url": "https://github.com/ricardoprs76-max/despacho-juridico/tree/main/integrations/n8n/node"
 			}
 		]
 	}

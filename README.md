@@ -1,6 +1,6 @@
 # Agentes IA para Empresas
 
-[![CI](https://github.com/ricardoprs76-max/agentes-ia-empresas/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardoprs76-max/agentes-ia-empresas/actions/workflows/ci.yml)
+[![CI](https://github.com/ricardoprs76-max/despacho-juridico/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardoprs76-max/despacho-juridico/actions/workflows/ci.yml)
 ![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB)
 ![mypy strict](https://img.shields.io/badge/mypy-strict-2A6DB2)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)

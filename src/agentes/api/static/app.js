@@ -105,6 +105,7 @@ function addMessage(role, text) {
   item.append(node("span", "who", who), node("p", "text", text));
   els.messages.append(item);
   scrollDown();
+  return item;
 }
 
 function draftRows(pending) {
@@ -153,13 +154,18 @@ async function sendMessage() {
   const text = els.message.value.trim();
   if (!text || state.busy) return;
   setBusy(true);
-  addMessage("user", text);
+  const bubble = addMessage("user", text);
   els.message.value = "";
   setStatus("Pensando…");
   try {
     const body = state.thread ? { message: text, thread_id: state.thread } : { message: text };
     showReply(await api("POST", "/chat", body));
   } catch (error) {
+    if (error.status === 409) {
+      // The agent never took this message: take it back so the user can resend it.
+      bubble.remove();
+      els.message.value = text;
+    }
     setStatus(error.message, true);
     setBusy(false);
   }
@@ -229,7 +235,7 @@ function renderHealth(health) {
   state.company = health.company;
   document.title = `${health.company} · Agente`;
   els.company.textContent = health.company;
-  els.sector.textContent = health.sector;
+  els.sector.textContent = health.fictitious ? `${health.sector} · empresa ficticia de ejemplo` : health.sector;
   els.mark.textContent = initials(health.company);
   els.mode.textContent = health.demo ? "Modo demo: respuestas de ejemplo" : `${health.provider} · ${health.model}`;
   els.mode.classList.toggle("demo", health.demo);

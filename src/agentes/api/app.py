@@ -7,11 +7,15 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi import Path as PathParam
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, Response
 from fastapi.security import APIKeyHeader
 from fastapi.staticfiles import StaticFiles
 from langchain_core.messages import AIMessage, HumanMessage
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from agentes.agent import Agent, AgentError, AgentReply, PendingAction
 from agentes.api.schemas import (
@@ -30,6 +34,9 @@ from agentes.api.schemas import (
 API_KEY_HEADER = "X-API-Key"
 BAD_KEY = "Clave de API inválida o ausente."
 MODEL_FAILED = "No se pudo obtener respuesta del modelo: {error}"
+BAD_JSON = "El cuerpo debe ser JSON válido en UTF-8."
+BAD_DATA = "Datos no válidos: revisa {fields}."
+FASTAPI_BAD_BODY = "There was an error parsing the body"
 STATIC_DIR = Path(__file__).parent / "static"
 DEFAULT_AUDIT = 50
 MAX_AUDIT = 500
@@ -54,6 +61,26 @@ def create_app(agent: Agent, api_key: str | None = None) -> FastAPI:
     # concurrent turns, and serialising them makes a double click run an action once.
     lock = threading.Lock()
     app.state.agent_lock = lock
+
+    @app.exception_handler(StarletteHTTPException)
+    async def spanish_body_error(request: Request, exc: StarletteHTTPException) -> Response:
+        if exc.status_code == 400 and exc.detail == FASTAPI_BAD_BODY:
+            return JSONResponse(status_code=400, content={"detail": BAD_JSON})
+        return await http_exception_handler(request, exc)
+
+    @app.exception_handler(RequestValidationError)
+    async def spanish_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+        errors = exc.errors()
+        if any(e.get("type") == "json_invalid" for e in errors):
+            return JSONResponse(status_code=422, content={"detail": BAD_JSON})
+        # The first loc item is where the value came from (body, query, path).
+        fields = sorted(
+            {".".join(str(p) for p in e["loc"][1:]) or str(e["loc"][0]) for e in errors}
+        )
+        return JSONResponse(
+            status_code=422, content={"detail": BAD_DATA.format(fields=", ".join(fields))}
+        )
+
     header = APIKeyHeader(name=API_KEY_HEADER, auto_error=False)
 
     def require_key(given: Annotated[str | None, Depends(header)]) -> None:
@@ -79,6 +106,7 @@ def create_app(agent: Agent, api_key: str | None = None) -> FastAPI:
         return HealthResponse(
             status="ok",
             company=agent.config.company_name,
+            fictitious=agent.config.fictitious,
             sector=agent.config.sector,
             demo=agent.is_demo,
             provider=agent.selection.provider,

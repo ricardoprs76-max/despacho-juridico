@@ -1,6 +1,7 @@
 # Clínica ficticia: citas, preparación de exámenes y convenios.
 id: clinica
 company_name: Clínica Sol del Valle
+fictitious: true
 sector: salud (consulta externa y laboratorio clínico)
 tone: cálido, tranquilo y preciso
 rules:

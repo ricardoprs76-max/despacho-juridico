@@ -20,6 +20,11 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
 DEMO_PREFIX = "[modo demo] "
+WHICH_ACTUACION = (
+    "¿De qué actuación se trata? Por ejemplo: recurso de reposición, apelación de un auto "
+    "o de una sentencia, contestación de la demanda (verbal o verbal sumario), excepciones "
+    "en un ejecutivo, impugnación de tutela o respuesta a un derecho de petición."
+)
 GENERIC_ANSWER = (
     "En modo demo no puedo consultar información real. Configura una clave de IA "
     "(por ejemplo GOOGLE_API_KEY, que es gratis) para obtener respuestas de verdad."
@@ -99,6 +104,12 @@ class DemoChatModel(BaseChatModel):
         call = self._tool_call_for(text, original, call_id=f"demo-{len(messages)}")
         if call is not None:
             return AIMessage(content="", tool_calls=[call])
+        if (
+            "calcular_plazo" in self.tool_names
+            and _DEADLINE_RE.search(text)
+            and _DATE_RE.search(text)
+        ):
+            return AIMessage(content=DEMO_PREFIX + WHICH_ACTUACION)
         if _GREETING_RE.search(text):
             answer = f"¡Hola! Soy el asistente de {_company_from(messages)}. ¿En qué te ayudo?"
         else:
@@ -109,9 +120,10 @@ class DemoChatModel(BaseChatModel):
         date_match = _DATE_RE.search(text)
         if "calcular_plazo" in self.tool_names and _DEADLINE_RE.search(text) and date_match:
             actuacion = next(
-                (key for words, key in _ACTUACIONES if all(w in text for w in words)),
-                "reposicion",
+                (key for words, key in _ACTUACIONES if all(w in text for w in words)), None
             )
+            if actuacion is None:
+                return None
             args = {
                 "actuacion": actuacion,
                 "fecha_notificacion": date_match.group(1),

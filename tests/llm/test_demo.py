@@ -191,3 +191,12 @@ def test_demo_email_word_does_not_set_electronic_flag() -> None:
     args = plazo_args("me llegó por correo el auto, ¿plazo de reposición? 02/03/2026")
     assert args is not None
     assert args["notificacion_electronica"] is False
+
+
+def test_demo_plazo_without_actuacion_asks_which() -> None:
+    model = DemoChatModel().bind_tools([calcular_plazo])
+    assert isinstance(model, DemoChatModel)
+    answer = demo_call(model, "¿cuándo vence el plazo? me notificaron el 02/03/2026")
+    assert not answer.tool_calls
+    assert isinstance(answer.content, str)
+    assert "reposición" in answer.content and "apelación" in answer.content

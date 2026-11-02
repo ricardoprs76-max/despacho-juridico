@@ -78,3 +78,8 @@ def test_contract_model_is_marked_as_practice_material() -> None:
     first_lines = "\n".join(text.splitlines()[:5])
     assert "no usar como modelo" in first_lines.lower()
     assert "cláusulas problemáticas" in first_lines.lower()
+
+
+@pytest.mark.parametrize("path", ALL, ids=lambda p: p.stem)
+def test_demo_companies_are_marked_fictitious(path: Path) -> None:
+    assert load_config(path).fictitious

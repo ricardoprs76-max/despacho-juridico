@@ -30,8 +30,14 @@ def invalid_args(tool: BaseTool, args: dict[str, Any]) -> str | None:
     try:
         schema.model_validate(args)
     except ValidationError as exc:
-        fields = ", ".join(".".join(str(p) for p in e["loc"]) for e in exc.errors())
-        return f"Argumentos no válidos para {tool.name}: revisa {fields}."
+        problems = []
+        for error in exc.errors():
+            field = ".".join(str(p) for p in error["loc"])
+            expected = (error.get("ctx") or {}).get("expected")
+            if error["type"] == "enum" and expected:
+                field += f" (valores válidos: {expected})"
+            problems.append(field)
+        return f"Argumentos no válidos para {tool.name}: revisa {', '.join(problems)}."
     return None
 
 

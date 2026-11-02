@@ -27,6 +27,9 @@ class AgentConfig(BaseModel):
 
     id: str = Field(pattern=r"^[a-z0-9-]+$")
     company_name: str
+    fictitious: bool = Field(
+        default=False, description="True for example companies; the web chat says so."
+    )
     sector: str
     language: str = "es"
     tone: str

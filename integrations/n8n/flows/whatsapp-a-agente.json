@@ -56,7 +56,7 @@
       },
       "id": "7d2e1a40-5c3b-4f8e-a1b2-3c4d5e6f7a03",
       "name": "Preguntar al agente",
-      "type": "n8n-nodes-agentes-ia.agentesIa",
+      "type": "CUSTOM.agentesIa",
       "typeVersion": 1,
       "position": [440, 0],
       "credentials": {

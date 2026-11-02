@@ -11,7 +11,7 @@ from agentes.api.schemas import THREAD_PATTERN
 
 FLOWS_DIR = Path(__file__).resolve().parents[1] / "integrations" / "n8n" / "flows"
 FLOW_FILES = sorted(FLOWS_DIR.glob("*.json"))
-AGENT_NODE = "n8n-nodes-agentes-ia.agentesIa"
+AGENT_NODE = "CUSTOM.agentesIa"
 # The JS expression every flow uses, as ('<prefix>-' + source).replace(...).slice(0, 64).
 THREAD_EXPR = re.compile(
     r"\('(?P<prefix>[a-z]+)-' \+ .+?\)\.replace\(/\[\^A-Za-z0-9_-\]/g, '-'\)\.slice\(0, 64\)"

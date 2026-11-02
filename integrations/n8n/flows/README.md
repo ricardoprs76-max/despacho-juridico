@@ -15,6 +15,13 @@ character outside `A-Z a-z 0-9 _ -` replaced by `-` and cut to 64 characters, e.
 `ana.perez+ventas@ejemplo.com` → `correo-ana-perez-ventas-ejemplo-com`. That is the id the
 approval link expects (it is also in the sheet's `Conversación` column).
 
+## Node type
+
+The flows reference the node as `CUSTOM.agentesIa`: that is the name n8n gives to nodes loaded
+from a folder (`N8N_CUSTOM_EXTENSIONS`, which is how `docker-compose.yml` and the n8n image in
+`../Dockerfile` install it). If the package is instead installed from npm as a community node,
+n8n names it `n8n-nodes-agentes-ia.agentesIa`; replace that string in the JSON before importing.
+
 ## Credentials to create in n8n
 
 The files reference credentials **by name only** (no ids, no secrets). Create them with

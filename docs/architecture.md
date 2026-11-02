@@ -48,6 +48,7 @@ flowchart LR
 | `agentes.api` | FastAPI app around one open `Agent`: API-key auth, one turn at a time, static Spanish web chat. |
 | `agentes.mcp` | MCP server (official SDK): the agent behind `preguntar`/`confirmar`, read-only tools exposed directly. |
 | `integrations/n8n` | TypeScript n8n node over the HTTP API, importable flow templates, n8n image with the node preinstalled (used by `docker-compose.yml`). |
+| `agentes.validation` | One-line Spanish descriptions of validation errors, shared by config loading, tool arguments and the API. |
 | `agentes.cli` | Typer commands (`chat`, `serve`, `mcp`, `auditoria`, `validate`); forces UTF-8 for Windows consoles. |
 
 Design decisions:

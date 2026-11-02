@@ -1,5 +1,11 @@
 # Agentes IA para Empresas
 
+[![CI](https://github.com/ricardoprs76-max/agentes-ia-empresas/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardoprs76-max/agentes-ia-empresas/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB)
+![mypy strict](https://img.shields.io/badge/mypy-strict-2A6DB2)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 > [Read in English](README.md)
 
 **Un motor, muchas empresas.** Describe una empresa en un solo archivo YAML (nombre,
@@ -18,7 +24,19 @@ Cambia el archivo y el mismo motor atiende a un despacho jurídico, una ferreter
 - **Calidad exigente:** `mypy --strict`, `ruff` y pruebas que nunca llaman a una IA real,
   ejecutadas en CI en Linux y Windows.
 
+![Demo del chat web: respuesta con fuente, un plazo procesal y un correo que espera aprobación](docs/demo.gif)
+
 ## Inicio rápido
+
+**Con Docker** (agente, chat web y n8n):
+
+```bash
+echo "AGENTES_API_KEY=una-clave-larga-al-azar" > .env
+docker compose up --build
+# chat web: http://localhost:8000 (pega la clave cuando la pida)   n8n: http://localhost:5678
+```
+
+**Con uv** (Python 3.12):
 
 ```bash
 pip install uv            # si no lo tienes
@@ -152,7 +170,19 @@ docker compose up --build
 - [x] **Fase 3 — Ejemplos por sector:** despacho jurídico (plazos legales colombianos), tienda, clínica.
 - [x] **Fase 4a — API y demo:** servicio FastAPI con clave de acceso, chat web en español, servidor MCP.
 - [x] **Fase 4b — n8n:** plantillas de flujos, nodo propio de n8n en TypeScript, docker-compose.
-- [ ] **Fase 5 — Presentación:** Docker, GIF de demostración, pulido final.
+- [x] **Fase 5 — Presentación:** Docker, GIF de demostración, pulido final.
+
+## Limitaciones conocidas
+
+- Los embeddings de los documentos (con clave de Google) se recalculan en cada arranque.
+- La búsqueda por palabras usa raíces: no relaciona *arriendo* con *arrendamiento*
+  (los embeddings sí).
+- SMTP usa STARTTLS (puerto 587); el puerto 465 con TLS implícito no está soportado.
+- En Google Sheets cada fila es libre (una celda `campo: valor` por dato), sin usar los
+  encabezados de la hoja; el CSV local añade una columna por cada campo nuevo.
+- Con clave de API, `/docs` (OpenAPI) sigue siendo público; sin clave `agentes serve` solo
+  escucha en `127.0.0.1`/`localhost` (no `::1`).
+- Los plazos procesales son un cálculo orientativo y deben verificarse en el expediente.
 
 ## Licencia
 

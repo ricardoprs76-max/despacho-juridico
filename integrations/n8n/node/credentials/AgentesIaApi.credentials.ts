@@ -17,7 +17,7 @@ export class AgentesIaApi implements ICredentialType {
 	};
 
 	documentationUrl =
-		'https://github.com/ricardoprs76/agentes-ia-empresas/tree/main/integrations/n8n/node#credentials';
+		'https://github.com/ricardoprs76-max/agentes-ia-empresas/tree/main/integrations/n8n/node#credentials';
 
 	properties: INodeProperties[] = [
 		{

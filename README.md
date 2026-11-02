@@ -1,5 +1,11 @@
 # Agentes IA para Empresas
 
+[![CI](https://github.com/ricardoprs76-max/agentes-ia-empresas/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardoprs76-max/agentes-ia-empresas/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB)
+![mypy strict](https://img.shields.io/badge/mypy-strict-2A6DB2)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 > [Leer en español](README.es.md)
 
 **One engine, many businesses.** Describe a company in a single YAML file — its name,
@@ -19,7 +25,19 @@ same engine serves a law firm, a hardware store or a clinic.
 - **Strict quality bar:** `mypy --strict`, `ruff`, and a test suite that never calls a
   real LLM, run in CI on Linux and Windows.
 
+![Web chat demo: a cited answer, a legal deadline and an email that waits for approval](docs/demo.gif)
+
 ## Quickstart
+
+**With Docker** (agent, web chat and n8n):
+
+```bash
+echo "AGENTES_API_KEY=pick-a-long-random-key" > .env
+docker compose up --build
+# web chat: http://localhost:8000 (paste the key when asked)   n8n: http://localhost:5678
+```
+
+**With uv** (Python 3.12):
 
 ```bash
 pip install uv            # if you don't have it
@@ -188,6 +206,7 @@ docker compose up --build
 |-------|----------|-------------|
 | `id` | yes | Slug (`a-z`, `0-9`, `-`). |
 | `company_name` | yes | Shown in replies and in the system prompt. |
+| `fictitious` | no | `true` for example companies; the web chat says so. |
 | `sector` | yes | Business sector, e.g. `despacho jurídico`. |
 | `tone` | yes | How the agent should sound. |
 | `rules` | no | List of rules the agent must follow. |
@@ -218,7 +237,20 @@ Architecture overview: [docs/architecture.md](docs/architecture.md).
 - [x] **Phase 3 — Sector examples:** law firm (Colombian legal deadlines), shop, clinic.
 - [x] **Phase 4a — API & demo:** FastAPI service with API-key auth, Spanish web chat, MCP server.
 - [x] **Phase 4b — n8n:** flow templates, a custom TypeScript n8n node, docker-compose.
-- [ ] **Phase 5 — Presentation:** Docker, demo GIF, final polish.
+- [x] **Phase 5 — Presentation:** Docker, demo GIF, final polish.
+
+## Known limitations
+
+- Document embeddings (with a Google key) are recomputed at every start; there is no cache.
+- Keyword search is stem-based: it does not relate words with different stems such as
+  *arriendo* and *arrendamiento* (embeddings do).
+- SMTP uses STARTTLS (port 587); implicit TLS on port 465 is not supported.
+- Google Sheets rows are free-form (one `campo: valor` per cell), not mapped to the
+  sheet's header; the local CSV adds a column for every new field.
+- With an API key set, `/docs` (OpenAPI) stays public; without a key `agentes serve` only
+  binds to `127.0.0.1`/`localhost` (not `::1`).
+- Legal deadlines are an orienting calculation (see the legal section) and must be checked
+  against the case file.
 
 ## License
 

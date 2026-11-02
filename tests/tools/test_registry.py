@@ -192,3 +192,15 @@ def test_plazo_schema_enumerates_actuaciones(tmp_path: Path) -> None:
 def test_plazo_is_read_only() -> None:
     assert "calcular_plazo" in TOOL_NAMES
     assert "calcular_plazo" not in SIDE_EFFECT_TOOLS
+
+
+def test_unknown_actuacion_lists_valid_options(tmp_path: Path) -> None:
+    from agentes.graph.builder import invalid_args
+
+    cfg = config(["calcular_plazo"])
+    [plazo] = build_tools(cfg, build_context(cfg, tmp_path, env={}))
+    problem = invalid_args(plazo, {"actuacion": "inexistente", "fecha_notificacion": "02/03/2026"})
+    assert problem is not None
+    assert "actuacion: valor no permitido (opciones: " in problem
+    assert "reposicion" in problem and "apelacion_sentencia" in problem
+    assert " or " not in problem and " o " in problem

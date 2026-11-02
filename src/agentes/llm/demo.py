@@ -20,6 +20,11 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
 DEMO_PREFIX = "[modo demo] "
+WHICH_ACTUACION = (
+    "¿De qué actuación se trata? Por ejemplo: recurso de reposición, apelación de un auto "
+    "o de una sentencia, contestación de la demanda (verbal o verbal sumario), excepciones "
+    "en un ejecutivo, impugnación de tutela o respuesta a un derecho de petición."
+)
 GENERIC_ANSWER = (
     "En modo demo no puedo consultar información real. Configura una clave de IA "
     "(por ejemplo GOOGLE_API_KEY, que es gratis) para obtener respuestas de verdad."
@@ -65,6 +70,20 @@ def _last_human_text(messages: Sequence[BaseMessage]) -> str:
     return ""
 
 
+def _human_texts(messages: Sequence[BaseMessage]) -> list[str]:
+    return [
+        m.content for m in messages if isinstance(m, HumanMessage) and isinstance(m.content, str)
+    ]
+
+
+def _asked_which_actuacion(messages: Sequence[BaseMessage]) -> bool:
+    """True when the previous assistant turn was the demo asking which actuación."""
+    for message in reversed(messages[:-1]):
+        if isinstance(message, AIMessage):
+            return isinstance(message.content, str) and message.content.endswith(WHICH_ACTUACION)
+    return False
+
+
 def _tool_name(tool: dict[str, Any] | type | Callable[..., Any] | BaseTool) -> str:
     if isinstance(tool, BaseTool):
         return tool.name
@@ -95,23 +114,34 @@ class DemoChatModel(BaseChatModel):
             return AIMessage(content=f"{DEMO_PREFIX}Resultado: {last.text}")
 
         original = _last_human_text(messages)
+        if _asked_which_actuacion(messages):
+            # The answer ("reposición") completes the question asked one turn earlier.
+            original = f"{_human_texts(messages)[-2]} {original}"
         text = original.lower()
         call = self._tool_call_for(text, original, call_id=f"demo-{len(messages)}")
         if call is not None:
             return AIMessage(content="", tool_calls=[call])
+        if self._is_deadline_question(text):
+            return AIMessage(content=DEMO_PREFIX + WHICH_ACTUACION)
         if _GREETING_RE.search(text):
             answer = f"¡Hola! Soy el asistente de {_company_from(messages)}. ¿En qué te ayudo?"
         else:
             answer = GENERIC_ANSWER
         return AIMessage(content=DEMO_PREFIX + answer)
 
+    def _is_deadline_question(self, text: str) -> bool:
+        return bool(
+            "calcular_plazo" in self.tool_names
+            and _DEADLINE_RE.search(text)
+            and _DATE_RE.search(text)
+        )
+
     def _tool_call_for(self, text: str, original: str, call_id: str) -> ToolCall | None:
         date_match = _DATE_RE.search(text)
-        if "calcular_plazo" in self.tool_names and _DEADLINE_RE.search(text) and date_match:
-            actuacion = next(
-                (key for words, key in _ACTUACIONES if all(w in text for w in words)),
-                "reposicion",
-            )
+        actuacion = next(
+            (key for words, key in _ACTUACIONES if all(w in text for w in words)), None
+        )
+        if self._is_deadline_question(text) and date_match and actuacion is not None:
             args = {
                 "actuacion": actuacion,
                 "fecha_notificacion": date_match.group(1),

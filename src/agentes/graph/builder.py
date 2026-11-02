@@ -16,6 +16,7 @@ from pydantic import BaseModel, ValidationError
 from agentes.audit import AuditLog, AuditStatus
 from agentes.config import AgentConfig
 from agentes.graph.state import AgentState
+from agentes.validation import describe
 
 MODEL_NODE = "model"
 TOOLS_NODE = "tools"
@@ -30,8 +31,7 @@ def invalid_args(tool: BaseTool, args: dict[str, Any]) -> str | None:
     try:
         schema.model_validate(args)
     except ValidationError as exc:
-        fields = ", ".join(".".join(str(p) for p in e["loc"]) for e in exc.errors())
-        return f"Argumentos no válidos para {tool.name}: revisa {fields}."
+        return f"Argumentos no válidos para {tool.name}: {describe(exc.errors())}."
     return None
 
 

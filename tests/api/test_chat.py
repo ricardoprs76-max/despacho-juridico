@@ -19,6 +19,7 @@ def test_health_reports_company_and_mode(make_client: MakeClient) -> None:
         "status": "ok",
         "company": "Ferretería El Tornillo",
         "sector": "ferretería y materiales de construcción",
+        "fictitious": False,
         "demo": False,
         "provider": "test",
         "model": "recording",
@@ -165,3 +166,25 @@ def test_api_key_required_when_set(make_client: MakeClient) -> None:
     seen.append(health.text)
     assert client.get("/docs").status_code == 200
     assert all("s3creta" not in text for text in seen)
+
+
+def test_non_utf8_body_gets_spanish_error(make_client: MakeClient) -> None:
+    r = make_client([]).post(
+        "/chat", content=b'{"message": "\xff"}', headers={"Content-Type": "application/json"}
+    )
+    assert r.status_code == 400
+    assert r.json() == {"detail": "El cuerpo debe estar codificado en UTF-8."}
+
+
+def test_malformed_json_gets_spanish_error(make_client: MakeClient) -> None:
+    r = make_client([]).post(
+        "/chat", content=b'{"message": ', headers={"Content-Type": "application/json"}
+    )
+    assert r.status_code == 422
+    assert r.json() == {"detail": "El cuerpo no es JSON válido."}
+
+
+def test_validation_errors_are_spanish(make_client: MakeClient) -> None:
+    r = make_client([]).post("/chat", json={"message": ""})
+    assert r.status_code == 422
+    assert r.json() == {"detail": "Datos no válidos: message: no puede estar vacío."}

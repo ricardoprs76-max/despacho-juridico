@@ -56,6 +56,7 @@ class ToolOut(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     company: str
+    fictitious: bool = Field(description="true si es una empresa de ejemplo.")
     sector: str
     demo: bool
     provider: str

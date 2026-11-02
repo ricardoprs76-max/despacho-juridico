@@ -31,6 +31,11 @@ def test_audit_limit_bounds(make_client: MakeClient, limit: int) -> None:
     assert make_client([]).get("/audit", params={"limit": limit}).status_code == 422
 
 
+def test_audit_limit_error_says_the_maximum(make_client: MakeClient) -> None:
+    r = make_client([]).get("/audit", params={"limit": 1000})
+    assert r.json() == {"detail": "Datos no válidos: limit: debe ser menor o igual a 500."}
+
+
 def test_audit_bad_thread_is_422(make_client: MakeClient) -> None:
     assert make_client([]).get("/audit", params={"thread_id": "../x"}).status_code == 422
 

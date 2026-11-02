@@ -1,6 +1,7 @@
 # Tienda: una ferretería ficticia de barrio.
 id: tienda
 company_name: Ferretería El Tornillo
+fictitious: true
 sector: ferretería y materiales de construcción
 tone: cercano y práctico, como un vendedor de barrio que sabe de herramientas
 rules:

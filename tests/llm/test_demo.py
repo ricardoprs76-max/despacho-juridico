@@ -200,3 +200,27 @@ def test_demo_plazo_without_actuacion_asks_which() -> None:
     assert not answer.tool_calls
     assert isinstance(answer.content, str)
     assert "reposición" in answer.content and "apelación" in answer.content
+
+
+@tool
+def registrar_en_hoja(datos: list[dict[str, str]]) -> str:
+    """Registra datos."""
+    return "ok"
+
+
+def test_demo_deadline_words_do_not_block_other_tools() -> None:
+    model = DemoChatModel().bind_tools([calcular_plazo, registrar_en_hoja])
+    assert isinstance(model, DemoChatModel)
+    answer = demo_call(model, "Registra que el plazo del contrato vence el 15/03/2026")
+    assert [c["name"] for c in answer.tool_calls] == ["registrar_en_hoja"]
+
+
+def test_demo_uses_the_answer_to_which_actuacion() -> None:
+    model = DemoChatModel().bind_tools([calcular_plazo])
+    question = "¿cuándo vence el plazo? me notificaron el 02/03/2026"
+    first = demo_call(model, question)
+    result = model.invoke([SYSTEM, HumanMessage(question), first, HumanMessage("reposición")])
+    assert isinstance(result, AIMessage)
+    [call] = result.tool_calls
+    assert call["args"]["actuacion"] == "reposicion"
+    assert call["args"]["fecha_notificacion"] == "02/03/2026"

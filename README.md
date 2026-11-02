@@ -32,7 +32,7 @@ same engine serves a law firm, a hardware store or a clinic.
 **With Docker** (agent, web chat and n8n):
 
 ```bash
-echo "AGENTES_API_KEY=pick-a-long-random-key" > .env
+cp .env.example .env   # then set AGENTES_API_KEY to a long random value
 docker compose up --build
 # web chat: http://localhost:8000 (paste the key when asked)   n8n: http://localhost:5678
 ```
@@ -194,7 +194,7 @@ in and out, the agent keeps its rules, tools, confirmation step and audit log.
 - **docker-compose** runs both, with n8n's node preinstalled:
 
 ```bash
-echo "AGENTES_API_KEY=pick-a-long-random-key" > .env   # compose refuses to start without it
+cp .env.example .env   # then set AGENTES_API_KEY; compose refuses to start without it
 docker compose up --build
 # agent + web chat: http://localhost:8000   n8n: http://localhost:5678
 # in n8n, the "Agentes IA API" credential uses base URL http://agente:8000

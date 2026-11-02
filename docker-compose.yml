@@ -1,5 +1,5 @@
 # Agent API + n8n with the Agentes IA node. Usage:
-#   echo AGENTES_API_KEY=pick-a-long-random-key > .env
+#   cp .env.example .env   (then set AGENTES_API_KEY to a long random value)
 #   docker compose up --build
 # Agent: http://localhost:8000 (web chat)   n8n: http://localhost:5678
 # Inside n8n, the "Agentes IA API" credential uses base URL http://agente:8000.

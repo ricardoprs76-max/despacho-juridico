@@ -161,11 +161,10 @@ async function sendMessage() {
     const body = state.thread ? { message: text, thread_id: state.thread } : { message: text };
     showReply(await api("POST", "/chat", body));
   } catch (error) {
-    if (error.status === 409) {
-      // The agent never took this message: take it back so the user can resend it.
-      bubble.remove();
-      els.message.value = text;
-    }
+    // The server keeps no trace of a failed turn: take the message back so it can be resent.
+    bubble.remove();
+    if (!els.messages.children.length) els.empty.hidden = false;
+    els.message.value = text;
     setStatus(error.message, true);
     setBusy(false);
   }

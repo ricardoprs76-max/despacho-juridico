@@ -201,6 +201,6 @@ def test_unknown_actuacion_lists_valid_options(tmp_path: Path) -> None:
     [plazo] = build_tools(cfg, build_context(cfg, tmp_path, env={}))
     problem = invalid_args(plazo, {"actuacion": "inexistente", "fecha_notificacion": "02/03/2026"})
     assert problem is not None
-    assert "actuacion" in problem
-    assert "valores válidos" in problem
+    assert "actuacion: valor no permitido (opciones: " in problem
     assert "reposicion" in problem and "apelacion_sentencia" in problem
+    assert " or " not in problem and " o " in problem

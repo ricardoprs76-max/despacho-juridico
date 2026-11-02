@@ -30,13 +30,14 @@ from agentes.api.schemas import (
     PendingOut,
     ToolOut,
 )
+from agentes.validation import describe
 
 API_KEY_HEADER = "X-API-Key"
 BAD_KEY = "Clave de API inválida o ausente."
 MODEL_FAILED = "No se pudo obtener respuesta del modelo: {error}"
-BAD_JSON = "El cuerpo debe ser JSON válido en UTF-8."
-BAD_DATA = "Datos no válidos: revisa {fields}."
-FASTAPI_BAD_BODY = "There was an error parsing the body"
+BAD_ENCODING = "El cuerpo debe estar codificado en UTF-8."
+BAD_JSON = "El cuerpo no es JSON válido."
+BAD_DATA = "Datos no válidos: {problems}."
 STATIC_DIR = Path(__file__).parent / "static"
 DEFAULT_AUDIT = 50
 MAX_AUDIT = 500
@@ -64,22 +65,20 @@ def create_app(agent: Agent, api_key: str | None = None) -> FastAPI:
 
     @app.exception_handler(StarletteHTTPException)
     async def spanish_body_error(request: Request, exc: StarletteHTTPException) -> Response:
-        if exc.status_code == 400 and exc.detail == FASTAPI_BAD_BODY:
-            return JSONResponse(status_code=400, content={"detail": BAD_JSON})
+        # FastAPI turns an undecodable body into a generic 400; its cause tells why.
+        if exc.status_code == 400 and isinstance(exc.__cause__, UnicodeDecodeError):
+            return JSONResponse(status_code=400, content={"detail": BAD_ENCODING})
         return await http_exception_handler(request, exc)
 
     @app.exception_handler(RequestValidationError)
     async def spanish_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
         errors = exc.errors()
         if any(e.get("type") == "json_invalid" for e in errors):
-            return JSONResponse(status_code=422, content={"detail": BAD_JSON})
-        # The first loc item is where the value came from (body, query, path).
-        fields = sorted(
-            {".".join(str(p) for p in e["loc"][1:]) or str(e["loc"][0]) for e in errors}
-        )
-        return JSONResponse(
-            status_code=422, content={"detail": BAD_DATA.format(fields=", ".join(fields))}
-        )
+            detail = BAD_JSON
+        else:
+            # The first loc part says where the value came from (body, query, path).
+            detail = BAD_DATA.format(problems=describe(errors, skip=1))
+        return JSONResponse(status_code=422, content={"detail": detail})
 
     header = APIKeyHeader(name=API_KEY_HEADER, auto_error=False)
 

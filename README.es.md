@@ -31,7 +31,7 @@ Cambia el archivo y el mismo motor atiende a un despacho jurídico, una ferreter
 **Con Docker** (agente, chat web y n8n):
 
 ```bash
-echo "AGENTES_API_KEY=una-clave-larga-al-azar" > .env
+cp .env.example .env   # y define AGENTES_API_KEY con un valor largo y al azar
 docker compose up --build
 # chat web: http://localhost:8000 (pega la clave cuando la pida)   n8n: http://localhost:5678
 ```
@@ -141,7 +141,7 @@ agente conserva sus reglas, herramientas, confirmación y registro de auditoría
 - **docker-compose** levanta ambos, con el nodo ya instalado en n8n:
 
 ```bash
-echo "AGENTES_API_KEY=una-clave-larga-al-azar" > .env   # sin ella compose no arranca
+cp .env.example .env   # y define AGENTES_API_KEY; sin ella compose no arranca
 docker compose up --build
 # agente y chat web: http://localhost:8000   n8n: http://localhost:5678
 # en n8n, la credencial "Agentes IA API" usa la URL http://agente:8000

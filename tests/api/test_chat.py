@@ -173,11 +173,18 @@ def test_non_utf8_body_gets_spanish_error(make_client: MakeClient) -> None:
         "/chat", content=b'{"message": "\xff"}', headers={"Content-Type": "application/json"}
     )
     assert r.status_code == 400
-    assert isinstance(r.json()["detail"], str)
-    assert "JSON" in r.json()["detail"] and "UTF-8" in r.json()["detail"]
+    assert r.json() == {"detail": "El cuerpo debe estar codificado en UTF-8."}
+
+
+def test_malformed_json_gets_spanish_error(make_client: MakeClient) -> None:
+    r = make_client([]).post(
+        "/chat", content=b'{"message": ', headers={"Content-Type": "application/json"}
+    )
+    assert r.status_code == 422
+    assert r.json() == {"detail": "El cuerpo no es JSON válido."}
 
 
 def test_validation_errors_are_spanish(make_client: MakeClient) -> None:
     r = make_client([]).post("/chat", json={"message": ""})
     assert r.status_code == 422
-    assert r.json()["detail"] == "Datos no válidos: revisa message."
+    assert r.json() == {"detail": "Datos no válidos: message: no puede estar vacío."}

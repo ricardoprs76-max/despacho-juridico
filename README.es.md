@@ -108,6 +108,27 @@ quedan en el registro de auditoría. Las herramientas con efectos nunca se expon
 solo se ejecutan con `preguntar` → `confirmar`. La configuración para Claude Desktop está en el
 [README en inglés](README.md#mcp-server).
 
+## n8n
+
+El agente se conecta a [n8n](https://n8n.io) sin rehacerlo allí: n8n mueve los mensajes y el
+agente conserva sus reglas, herramientas, confirmación y registro de auditoría.
+
+- **Nodo propio** [`integrations/n8n/node`](integrations/n8n/node) (TypeScript, CLI oficial de
+  nodos de n8n, lint estricto): enviar mensaje, confirmar, ver historial y leer la auditoría.
+  Una acción pendiente vuelve en `pending` en lugar de ejecutarse.
+- **Plantillas de flujos** [`integrations/n8n/flows`](integrations/n8n/flows): correo → agente
+  → registro en Google Sheets y respuesta; WhatsApp → agente → respuesta; y un enlace de
+  aprobación (`/webhook/aprobar?conversacion=…&aprobar=si`, con usuario y contraseña) que
+  confirma la acción pendiente. Ningún flujo dice que algo se hizo mientras espera aprobación.
+- **docker-compose** levanta ambos, con el nodo ya instalado en n8n:
+
+```bash
+echo "AGENTES_API_KEY=una-clave-larga-al-azar" > .env   # sin ella compose no arranca
+docker compose up --build
+# agente y chat web: http://localhost:8000   n8n: http://localhost:5678
+# en n8n, la credencial "Agentes IA API" usa la URL http://agente:8000
+```
+
 ## Configuración de la empresa
 
 | Campo | Obligatorio | Descripción |
@@ -130,7 +151,7 @@ solo se ejecutan con `preguntar` → `confirmar`. La configuración para Claude 
 - [x] **Fase 2 — Herramientas y seguridad:** consulta de documentos con citas, Sheets y correo, confirmación humana, registro de auditoría.
 - [x] **Fase 3 — Ejemplos por sector:** despacho jurídico (plazos legales colombianos), tienda, clínica.
 - [x] **Fase 4a — API y demo:** servicio FastAPI con clave de acceso, chat web en español, servidor MCP.
-- [ ] **Fase 4b — n8n:** plantillas de flujos, nodo propio de n8n en TypeScript, docker-compose.
+- [x] **Fase 4b — n8n:** plantillas de flujos, nodo propio de n8n en TypeScript, docker-compose.
 - [ ] **Fase 5 — Presentación:** Docker, GIF de demostración, pulido final.
 
 ## Licencia

@@ -31,6 +31,7 @@ flowchart LR
     AGENT --> CLI[agentes chat / auditoria / validate]
     AGENT --> API[FastAPI: /chat · /confirm · /audit + web chat]
     AGENT --> MCP[MCP server: preguntar · confirmar · read-only tools]
+    API --> N8N[n8n node + flows: email · WhatsApp · approval link]
 ```
 
 | Module | Responsibility |
@@ -46,6 +47,7 @@ flowchart LR
 | `agentes.agent` | Facade: `ask`, `confirm`, `pending`, `history`, `run_tool` (read-only tools only); owns the SQLite connections. |
 | `agentes.api` | FastAPI app around one open `Agent`: API-key auth, one turn at a time, static Spanish web chat. |
 | `agentes.mcp` | MCP server (official SDK): the agent behind `preguntar`/`confirmar`, read-only tools exposed directly. |
+| `integrations/n8n` | TypeScript n8n node over the HTTP API, importable flow templates, n8n image with the node preinstalled (used by `docker-compose.yml`). |
 | `agentes.cli` | Typer commands (`chat`, `serve`, `mcp`, `auditoria`, `validate`); forces UTF-8 for Windows consoles. |
 
 Design decisions:
@@ -53,6 +55,11 @@ Design decisions:
 - **Every surface keeps the same safety** — the CLI, the HTTP API, the web chat and the MCP
   server all go through `Agent`, so side effects always stop at the same confirmation and land
   in the same audit log. MCP never exposes a side-effecting tool directly.
+- **n8n as plumbing, not as the agent** — flows only call the HTTP API through the custom
+  node; the agent is never rebuilt with n8n's LLM nodes, so its rules, confirmation and audit
+  log apply to email and WhatsApp too. Conversation ids are derived from the sender and
+  sanitised to the API's pattern, and the approval webhook needs Basic Auth because those
+  ids are guessable.
 - **One turn at a time in the API** — a lock around every agent call makes a double click on
   "Confirmar" a `409` instead of a second email, and keeps SQLite checkpoints consistent.
 

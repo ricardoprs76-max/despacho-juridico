@@ -1,0 +1,68 @@
+{
+  "name": "Aprobar acción del agente",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "aprobar",
+        "authentication": "basicAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c01",
+      "name": "Enlace de aprobación",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "3f2e1d0c-9b8a-4776-a5b4-c3d2e1f0a9b8",
+      "credentials": {
+        "httpBasicAuth": { "name": "Aprobadores" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "conversation",
+        "operation": "confirm",
+        "threadId": "={{ $json.query.conversacion }}",
+        "approved": "={{ $json.query.aprobar === 'si' }}"
+      },
+      "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c02",
+      "name": "Confirmar al agente",
+      "type": "n8n-nodes-agentes-ia.agentesIa",
+      "typeVersion": 1,
+      "position": [240, 0],
+      "credentials": {
+        "agentesIaApi": { "name": "Agentes IA API" }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.reply }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "text/plain; charset=utf-8" }
+            ]
+          }
+        }
+      },
+      "id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c03",
+      "name": "Mostrar resultado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [480, 0]
+    }
+  ],
+  "connections": {
+    "Enlace de aprobación": {
+      "main": [[{ "node": "Confirmar al agente", "type": "main", "index": 0 }]]
+    },
+    "Confirmar al agente": {
+      "main": [[{ "node": "Mostrar resultado", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1", "timezone": "America/Bogota" },
+  "active": false,
+  "tags": []
+}

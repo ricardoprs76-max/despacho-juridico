@@ -52,7 +52,8 @@ def test_flow_structure(path: Path) -> None:
             for link in branch:
                 assert link["node"] in names, link
     assert agent_nodes(flow), "every flow calls the agent"
-    assert not any("langchain" in n["type"] for n in flow["nodes"]), "the agent is not rebuilt in n8n"
+    rebuilt = any("langchain" in n["type"] for n in flow["nodes"])
+    assert not rebuilt, "the agent is not rebuilt in n8n"
 
 
 @pytest.mark.parametrize("path", FLOW_FILES, ids=lambda p: p.name)
@@ -101,5 +102,6 @@ def test_approval_flow_confirms_from_the_link() -> None:
 
 
 def test_sanitize_examples() -> None:
-    assert sanitize("correo", "ana.perez+ventas@ejemplo.com") == "correo-ana-perez-ventas-ejemplo-com"
+    email = sanitize("correo", "ana.perez+ventas@ejemplo.com")
+    assert email == "correo-ana-perez-ventas-ejemplo-com"
     assert sanitize("wa", "+57 300 123 4567") == "wa--57-300-123-4567"
